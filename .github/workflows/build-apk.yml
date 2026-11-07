@@ -1,97 +1,77 @@
-name: Build OmegaStream APK
+name: Build APK
+
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-java@v4
         with:
-          java-version: '17'
           distribution: 'temurin'
+          java-version: '17'
 
-      - name: Generate Android Project
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.3'
+
+      # ============================================
+      # CREATE ALL PROJECT FILES
+      # ============================================
+
+      - name: Create project files
         run: |
           mkdir -p app/src/main/java/com/omegastream/app
+          mkdir -p app/src/main/res/layout
+          mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/mipmap-xxxhdpi
-          mkdir -p gradle/wrapper
 
-          # Generate icon
-          python3 -c "
-          import struct, zlib
-          w=h=192; raw=b''
-          for y in range(h):
-              raw += b'\\x00'
-              for x in range(w):
-                  cx,cy=w//2,h//2; dx,dy=x-cx,y-cy; d=(dx*dx+dy*dy)**0.5
-                  if d<65: raw+=bytes([0,220,130,255])
-                  elif d<75: raw+=bytes([0,180,100,255])
-                  else: raw+=bytes([10,10,12,255])
-          def chunk(t,d): return struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d)&0xffffffff)
-          ihdr=struct.pack('>IIBBBBB',w,h,8,6,0,0,0)
-          png=b'\\x89PNG\\r\\n\\x1a\\n'+chunk(b'IHDR',ihdr)+chunk(b'IDAT',zlib.compress(raw))+chunk(b'IEND',b'')
-          open('app/src/main/res/mipmap-xxxhdpi/ic_launcher.png','wb').write(png)
-          "
-
-          # Gradle wrapper properties (pins Gradle 8.3 - compatible with AGP 8.1)
-          cat > gradle/wrapper/gradle-wrapper.properties << 'PROPS'
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.3-bin.zip
-          networkTimeout=10000
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
-          PROPS
-
-          # Download gradle wrapper jar
-          curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.3.0/gradle/wrapper/gradle-wrapper.jar" -o gradle/wrapper/gradle-wrapper.jar
-
-          # gradlew script
-          cat > gradlew << 'GRADLEW'
-          #!/bin/sh
-          APP_BASE_NAME=`basename "$0"`
-          APP_HOME=`dirname "$0"`
-          CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
-          exec java -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
-          GRADLEW
-          chmod +x gradlew
-
-          # settings.gradle
           cat > settings.gradle << 'EOF'
           pluginManagement {
-              repositories { google(); mavenCentral(); gradlePluginPortal() }
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
           }
           dependencyResolutionManagement {
-              repositories { google(); mavenCentral() }
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
           }
           rootProject.name = "OmegaStream"
           include ':app'
           EOF
 
-          # build.gradle
           cat > build.gradle << 'EOF'
           plugins {
               id 'com.android.application' version '8.1.0' apply false
           }
           EOF
 
-          # gradle.properties
           cat > gradle.properties << 'EOF'
           org.gradle.jvmargs=-Xmx2048m
           android.useAndroidX=true
+          android.nonTransitiveRClass=true
           EOF
 
-          # app/build.gradle
           cat > app/build.gradle << 'EOF'
-          plugins { id 'com.android.application' }
+          plugins {
+              id 'com.android.application'
+          }
+
           android {
               namespace 'com.omegastream.app'
               compileSdk 34
+
               defaultConfig {
                   applicationId "com.omegastream.app"
                   minSdk 24
@@ -99,26 +79,45 @@ jobs:
                   versionCode 1
                   versionName "1.0"
               }
+
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                  }
+                  debug {
+                      minifyEnabled false
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_1_8
+                  targetCompatibility JavaVersion.VERSION_1_8
+              }
+          }
+
+          dependencies {
+              implementation 'androidx.webkit:webkit:1.8.0'
           }
           EOF
 
-          # AndroidManifest.xml
           cat > app/src/main/AndroidManifest.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
               <uses-permission android:name="android.permission.INTERNET" />
-              <uses-permission android:name="android.permission.WAKE_LOCK" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
               <application
-                  android:label="OmegaStream"
+                  android:allowBackup="true"
                   android:icon="@mipmap/ic_launcher"
-                  android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
-                  android:usesCleartextTraffic="true"
-                  android:hardwareAccelerated="true">
+                  android:label="@string/app_name"
+                  android:theme="@style/Theme.OmegaStream"
+                  android:usesCleartextTraffic="true">
+
                   <activity
                       android:name=".MainActivity"
                       android:exported="true"
-                      android:configChanges="orientation|screenSize|keyboardHidden"
-                      android:screenOrientation="fullUser">
+                      android:configChanges="orientation|screenSize|keyboardHidden">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
@@ -128,106 +127,224 @@ jobs:
           </manifest>
           EOF
 
-          # MainActivity.java
           cat > app/src/main/java/com/omegastream/app/MainActivity.java << 'EOF'
           package com.omegastream.app;
 
           import android.app.Activity;
-          import android.app.DownloadManager;
-          import android.content.Context;
-          import android.content.Intent;
-          import android.net.Uri;
           import android.os.Bundle;
-          import android.os.Environment;
           import android.view.KeyEvent;
-          import android.view.WindowManager;
-          import android.webkit.CookieManager;
-          import android.webkit.DownloadListener;
-          import android.webkit.URLUtil;
+          import android.view.View;
           import android.webkit.WebChromeClient;
           import android.webkit.WebResourceRequest;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
-          import android.widget.Toast;
+          import android.widget.LinearLayout;
+          import android.widget.ProgressBar;
+          import android.widget.TextView;
+          import android.os.Handler;
+          import android.os.Looper;
 
           public class MainActivity extends Activity {
               private WebView webView;
-              private long backPressTime = 0;
+              private LinearLayout loadingScreen;
+              private TextView statusText;
+              private ProgressBar progressBar;
+              private boolean pageLoaded = false;
+              private int retryCount = 0;
+              private static final int MAX_RETRIES = 6;
+              private static final String SITE_URL = "https://moviebay.onrender.com";
+              private Handler retryHandler = new Handler(Looper.getMainLooper());
 
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-                  getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                  webView = new WebView(this);
-                  setContentView(webView);
+                  setContentView(R.layout.activity_main);
 
-                  WebSettings s = webView.getSettings();
-                  s.setJavaScriptEnabled(true);
-                  s.setDomStorageEnabled(true);
-                  s.setMediaPlaybackRequiresUserGesture(false);
-                  s.setLoadWithOverviewMode(true);
-                  s.setUseWideViewPort(true);
-                  s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-                  s.setCacheMode(WebSettings.LOAD_DEFAULT);
+                  webView = findViewById(R.id.webview);
+                  loadingScreen = findViewById(R.id.loading_screen);
+                  statusText = findViewById(R.id.status_text);
+                  progressBar = findViewById(R.id.progress_bar);
 
-                  CookieManager.getInstance().setAcceptCookie(true);
-                  CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setMediaPlaybackRequiresUserGesture(false);
+                  settings.setAllowFileAccess(true);
+                  settings.setAllowContentAccess(true);
+                  settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+                  settings.setUserAgentString(settings.getUserAgentString() + " OmegaStream/1.0");
+
+                  webView.setWebChromeClient(new WebChromeClient() {
+                      @Override
+                      public void onProgressChanged(WebView view, int newProgress) {
+                          if (newProgress >= 80 && !pageLoaded) {
+                              pageLoaded = true;
+                              loadingScreen.setVisibility(View.GONE);
+                          }
+                      }
+                  });
 
                   webView.setWebViewClient(new WebViewClient() {
                       @Override
-                      public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest req) {
-                          String url = req.getUrl().toString();
-                          if (url.contains("onrender.com") || url.contains("s-u.in")
-                              || url.contains("workers.dev") || url.contains("zflixtv.com"))
-                              return false;
-                          startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-                          return true;
+                      public void onPageFinished(WebView view, String url) {
+                          if (!pageLoaded) {
+                              pageLoaded = true;
+                              loadingScreen.setVisibility(View.GONE);
+                          }
+                      }
+
+                      @Override
+                      public void onReceivedError(WebView view, WebResourceRequest request,
+                                                  android.webkit.WebResourceError error) {
+                          if (request.isForMainFrame()) {
+                              retryOrShowError();
+                          }
                       }
                   });
 
-                  webView.setWebChromeClient(new WebChromeClient());
+                  statusText.setText("Waking up server...");
+                  progressBar.setVisibility(View.VISIBLE);
+                  webView.loadUrl(SITE_URL);
 
-                  webView.setDownloadListener((url, ua, disp, mime, sz) -> {
-                      try {
-                          DownloadManager.Request r = new DownloadManager.Request(Uri.parse(url));
-                          String name = URLUtil.guessFileName(url, disp, mime);
-                          r.setTitle(name);
-                          r.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                          r.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name);
-                          r.setMimeType(mime);
-                          r.addRequestHeader("Cookie", CookieManager.getInstance().getCookie(url));
-                          ((DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE)).enqueue(r);
-                          Toast.makeText(this, "Downloading " + name, Toast.LENGTH_SHORT).show();
-                      } catch (Exception e) {
-                          Toast.makeText(this, "Download failed", Toast.LENGTH_SHORT).show();
+                  retryHandler.postDelayed(new Runnable() {
+                      @Override
+                      public void run() {
+                          if (!pageLoaded) {
+                              retryOrShowError();
+                          }
                       }
-                  });
+                  }, 15000);
+              }
 
-                  if (savedInstanceState != null) webView.restoreState(savedInstanceState);
-                  else webView.loadUrl("https://omegastream.onrender.com");
+              private void retryOrShowError() {
+                  retryCount++;
+                  if (retryCount < MAX_RETRIES) {
+                      statusText.setText("Server is waking up... (attempt " + retryCount + "/" + MAX_RETRIES + ")");
+                      progressBar.setVisibility(View.VISIBLE);
+                      webView.loadUrl(SITE_URL);
+                      retryHandler.postDelayed(new Runnable() {
+                          @Override
+                          public void run() {
+                              if (!pageLoaded) {
+                                  retryOrShowError();
+                              }
+                          }
+                      }, 15000);
+                  } else {
+                      statusText.setText("Could not connect. Check your internet and try again.");
+                      progressBar.setVisibility(View.GONE);
+                      loadingScreen.setOnClickListener(new View.OnClickListener() {
+                          @Override
+                          public void onClick(View v) {
+                              retryCount = 0;
+                              pageLoaded = false;
+                              statusText.setText("Retrying...");
+                              progressBar.setVisibility(View.VISIBLE);
+                              webView.loadUrl(SITE_URL);
+                          }
+                      });
+                  }
               }
 
               @Override
-              public boolean onKeyDown(int code, KeyEvent e) {
-                  if (code == KeyEvent.KEYCODE_BACK && webView.canGoBack()) { webView.goBack(); return true; }
-                  if (code == KeyEvent.KEYCODE_BACK) {
-                      if (System.currentTimeMillis() - backPressTime < 2000) finish();
-                      else { backPressTime = System.currentTimeMillis(); Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show(); }
+              public boolean onKeyDown(int keyCode, KeyEvent event) {
+                  if (keyCode == KeyEvent.KEYCODE_BACK && webView.canGoBack()) {
+                      webView.goBack();
                       return true;
                   }
-                  return super.onKeyDown(code, e);
+                  return super.onKeyDown(keyCode, event);
               }
-
-              @Override protected void onSaveInstanceState(Bundle b) { super.onSaveInstanceState(b); webView.saveState(b); }
-              @Override protected void onPause() { super.onPause(); webView.onPause(); }
-              @Override protected void onResume() { super.onResume(); webView.onResume(); }
-              @Override protected void onDestroy() { if (webView != null) webView.destroy(); super.onDestroy(); }
           }
           EOF
 
+          cat > app/src/main/res/layout/activity_main.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:background="#0D0D1A">
+
+              <WebView
+                  android:id="@+id/webview"
+                  android:layout_width="match_parent"
+                  android:layout_height="match_parent" />
+
+              <LinearLayout
+                  android:id="@+id/loading_screen"
+                  android:layout_width="match_parent"
+                  android:layout_height="match_parent"
+                  android:gravity="center"
+                  android:orientation="vertical"
+                  android:background="#0D0D1A">
+
+                  <ProgressBar
+                      android:id="@+id/progress_bar"
+                      android:layout_width="48dp"
+                      android:layout_height="48dp"
+                      android:indeterminateTint="#E50914" />
+
+                  <TextView
+                      android:id="@+id/status_text"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"
+                      android:layout_marginTop="24dp"
+                      android:textColor="#FFFFFF"
+                      android:textSize="16sp"
+                      android:text="Loading OmegaStream..." />
+              </LinearLayout>
+          </RelativeLayout>
+          EOF
+
+          cat > app/src/main/res/values/strings.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">OmegaStream</string>
+          </resources>
+          EOF
+
+          cat > app/src/main/res/values/colors.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="primary">#E50914</color>
+              <color name="background">#0D0D1A</color>
+              <color name="white">#FFFFFF</color>
+          </resources>
+          EOF
+
+          cat > app/src/main/res/values/themes.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="Theme.OmegaStream" parent="android:Theme.Material.NoActionBar">
+                  <item name="android:windowBackground">@color/background</item>
+                  <item name="android:statusBarColor">@color/background</item>
+                  <item name="android:navigationBarColor">@color/background</item>
+              </style>
+          </resources>
+          EOF
+
+          # Generate a simple launcher icon (red square with white play triangle)
+          python3 -c "
+          from PIL import Image, ImageDraw
+          img = Image.new('RGBA', (192, 192), (229, 9, 20, 255))
+          draw = ImageDraw.Draw(img)
+          draw.polygon([(68, 48), (68, 144), (144, 96)], fill=(255, 255, 255, 255))
+          img.save('app/src/main/res/mipmap-xxxhdpi/ic_launcher.png')
+          "
+
+      # ============================================
+      # BUILD
+      # ============================================
+
       - name: Build APK
-        run: ./gradlew assembleDebug --no-daemon
+        run: gradle assembleDebug --no-daemon
+
+      - name: Find APK
+        run: |
+          echo "=== Looking for APK files ==="
+          find . -name "*.apk" -type f -ls
+          echo "=== Build outputs ==="
+          ls -la app/build/outputs/apk/debug/ 2>/dev/null || echo "No debug APK folder"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
