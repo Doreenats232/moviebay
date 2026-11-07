@@ -3,1981 +3,1726 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="theme-color" content="#000000">
-<meta name="color-scheme" content="dark">
 <title>OmegaStream</title>
+<meta name="theme-color" content="#0D0D1A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.json">
 <style>
-:root{--primary:#00DC82;--primary-dark:#00B86B;--bg:#000;--surface:#0A0A0C;--card:#111114;--card-hover:#1A1D24;--text:#FFF;--text-2:rgba(255,255,255,0.7);--text-3:rgba(255,255,255,0.4);--glass:rgba(255,255,255,0.06);--glass-border:rgba(255,255,255,0.1);--error:#FF4757;--warning:#FFA502;--radius:14px;--radius-sm:8px;--radius-pill:28px}
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow-x:hidden;min-height:100vh;min-height:100svh}
-::-webkit-scrollbar{display:none}
-html{scrollbar-width:none}
-img{-webkit-user-drag:none;user-select:none}
-button{cursor:pointer;border:none;outline:none;font-family:inherit}
-input{outline:none;font-family:inherit}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-@keyframes shimmer{to{background-position:-200% 0}}
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0D0D1A;--bg2:#1A1A2E;--bg3:#16213E;--accent:#E50914;--accent2:#FF0A16;--txt:#FFF;--txt2:#B0B0B0;--txt3:#666;--r:8px;--shadow:0 4px 20px rgba(0,0,0,0.5)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--txt);overflow-x:hidden;min-height:100vh;overflow-y:auto}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:3px}
+img{max-width:100%;display:block}
+button{cursor:pointer;font-family:inherit}
+a{text-decoration:none;color:inherit}
+
+/* Loader */
+.loader-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:99999;transition:opacity .5s}
+.loader-screen.hide{opacity:0;pointer-events:none}
+.loader-spinner{width:50px;height:50px;border:3px solid var(--bg2);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+.loader-text{margin-top:16px;color:var(--txt2);font-size:14px}
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-@keyframes toastIn{from{opacity:0;transform:translateY(-20px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
-@keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateY(-10px)}}
-@keyframes kenBurns{0%{transform:scale(1)}100%{transform:scale(1.05)}}
-@keyframes slideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
-@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-#statusBar{position:fixed;top:0;left:0;right:0;z-index:10001;background:rgba(0,220,130,0.95);color:#000;font-size:13px;font-weight:600;text-align:center;padding:10px 16px;transform:translateY(-100%);transition:transform 0.35s cubic-bezier(0.4,0,0.2,1)}
-#statusBar.show{transform:translateY(0)}
-#statusBar.error{background:rgba(220,50,50,0.95);color:#fff}
-#statusBar.warning{background:rgba(255,165,2,0.95);color:#000}
-#toastContainer{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:10002;display:flex;flex-direction:column;gap:8px;pointer-events:none;width:calc(100% - 32px);max-width:400px}
-.toast{background:rgba(20,20,24,0.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:var(--radius);padding:14px 18px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:10px;animation:toastIn 0.3s ease;pointer-events:auto}
-.toast.hiding{animation:toastOut 0.3s ease forwards}
-.toast-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;font-weight:800}
-.toast-icon.success{background:rgba(0,220,130,0.2);color:var(--primary)}
-.toast-icon.error{background:rgba(255,71,87,0.2);color:var(--error)}
-.toast-icon.info{background:rgba(255,165,2,0.2);color:var(--warning)}
-#loadingOverlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity 0.4s ease}
-#loadingOverlay.hidden{opacity:0;pointer-events:none}
-.loader-logo{font-size:32px;font-weight:800;color:var(--primary);letter-spacing:-1px}
-.loader-logo span{color:var(--text)}
-.spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,0.1);border-top-color:var(--primary);border-radius:50%;animation:spin 0.7s linear infinite}
-#loadingOverlay p{color:var(--text-3);font-size:13px;animation:pulse 1.5s infinite}
-.header{position:sticky;top:0;z-index:100;background:rgba(0,0,0,0.85);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);padding:14px 18px;display:flex;align-items:center;gap:12px}
-.header-logo{font-size:24px;font-weight:800;color:var(--primary);letter-spacing:-0.5px}
-.header-logo span{color:var(--text)}
-.header-actions{margin-left:auto;display:flex;gap:8px}
-.icon-btn{width:40px;height:40px;border:none;border-radius:50%;background:var(--glass);color:var(--text);font-size:17px;display:flex;align-items:center;justify-content:center;transition:background 0.2s,transform 0.15s}
-.icon-btn:active{background:rgba(255,255,255,0.15);transform:scale(0.92)}
-#searchBar{display:none;padding:0 18px 14px;background:rgba(0,0,0,0.85);position:relative}
-#searchBar.active{display:block;animation:fadeIn 0.2s ease}
-.search-wrap{position:relative;display:flex;align-items:center}
-.search-wrap .search-icon{position:absolute;left:14px;color:var(--text-3);font-size:16px;pointer-events:none}
-#searchInput{width:100%;padding:13px 16px 13px 42px;border:1px solid var(--glass-border);border-radius:var(--radius);background:rgba(255,255,255,0.06);color:var(--text);font-size:15px;transition:border-color 0.2s,background 0.2s}
-#searchInput::placeholder{color:var(--text-3)}
-#searchInput:focus{border-color:var(--primary);background:rgba(255,255,255,0.08)}
-#searchSuggestions{display:none;position:absolute;top:100%;left:18px;right:18px;background:rgba(18,18,22,0.98);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:var(--radius);z-index:200;max-height:380px;overflow-y:auto;margin-top:4px;animation:slideDown 0.15s ease}
-#searchSuggestions.show{display:block}
-.suggestion-item{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background 0.15s;border-bottom:1px solid rgba(255,255,255,0.04)}
-.suggestion-item:active{background:rgba(255,255,255,0.08)}
-.suggestion-name{font-size:14px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.suggestion-name mark{background:rgba(0,220,130,0.3);color:var(--primary);border-radius:2px}
-.suggestion-meta{font-size:11px;color:var(--text-3);flex-shrink:0;margin-left:12px}
-.suggestion-all{padding:14px 16px;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer;text-align:center;border-top:1px solid rgba(255,255,255,0.06);background:rgba(0,220,130,0.03)}
-.suggestion-all:active{background:rgba(0,220,130,0.08)}
-.suggestion-fuzzy{font-size:10px;color:var(--warning);margin-left:8px;font-weight:600}
-.category-tabs{display:flex;gap:8px;padding:12px 18px;overflow-x:auto;scrollbar-width:none}
-.category-tabs::-webkit-scrollbar{display:none}
-.cat-tab{flex-shrink:0;padding:9px 20px;border:none;border-radius:var(--radius-pill);background:rgba(255,255,255,0.07);color:var(--text-2);font-size:13px;font-weight:600;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);white-space:nowrap}
-.cat-tab.active{background:var(--primary);color:#000;box-shadow:0 4px 16px rgba(0,220,130,0.3)}
-.cat-tab:active{transform:scale(0.95)}
-.cat-tab-sep{flex-shrink:0;width:1px;background:rgba(255,255,255,0.1);margin:6px 4px}
-.hero-carousel{position:relative;width:100%;height:440px;overflow:hidden;border-radius:0 0 28px 28px}
-.hero-slides{position:relative;width:100%;height:100%}
-.hero-slide{position:absolute;inset:0;opacity:0;transition:opacity 0.8s ease;cursor:pointer}
+
+/* Header */
+.header{position:fixed;top:0;left:0;right:0;background:linear-gradient(to bottom,rgba(13,13,26,.98),rgba(13,13,26,.8));backdrop-filter:blur(12px);z-index:1000;padding:12px 20px;display:flex;align-items:center;gap:16px;transition:background .3s}
+.logo{font-size:22px;font-weight:800;color:var(--accent);white-space:nowrap;cursor:pointer}
+.logo span{color:var(--txt)}
+.search-wrap{flex:1;max-width:480px;position:relative}
+.search-input{width:100%;padding:10px 16px 10px 40px;border:1px solid var(--bg3);border-radius:24px;background:var(--bg2);color:var(--txt);font-size:14px;outline:none;transition:border .3s}
+.search-input:focus{border-color:var(--accent)}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--txt3);font-size:16px}
+.search-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--bg3);border-radius:var(--r);margin-top:8px;max-height:400px;overflow-y:auto;display:none;z-index:1001;box-shadow:var(--shadow)}
+.search-dropdown.show{display:block}
+.search-item{padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .2s}
+.search-item:hover{background:var(--bg3)}
+.search-item img{width:40px;height:56px;object-fit:cover;border-radius:4px}
+.search-item-info h4{font-size:14px;font-weight:500}
+.search-item-info p{font-size:12px;color:var(--txt2)}
+.search-empty{padding:20px;text-align:center;color:var(--txt3)}
+.nav-links{display:flex;gap:8px}
+.nav-link{padding:8px 14px;border-radius:20px;font-size:13px;color:var(--txt2);transition:all .2s;white-space:nowrap}
+.nav-link:hover,.nav-link.active{background:var(--accent);color:var(--txt)}
+.header-dl{padding:8px 14px;border-radius:20px;font-size:13px;background:var(--bg2);color:var(--txt);border:1px solid var(--bg3);display:flex;align-items:center;gap:6px;position:relative;white-space:nowrap}
+.header-dl:hover{background:var(--bg3)}
+.dl-badge{position:absolute;top:-4px;right:-4px;background:var(--accent);color:#fff;font-size:10px;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700}
+
+/* Hero */
+.hero{position:relative;width:100%;height:75vh;min-height:450px;overflow:hidden;margin-bottom:30px}
+.hero-slides{position:absolute;inset:0}
+.hero-slide{position:absolute;inset:0;opacity:0;transition:opacity .8s ease}
 .hero-slide.active{opacity:1}
 .hero-slide img{width:100%;height:100%;object-fit:cover}
-.hero-slide.active img{animation:kenBurns 8s ease-in-out infinite alternate}
-.hero-gradient{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.05) 0%,rgba(0,0,0,0.15) 40%,rgba(0,0,0,0.7) 70%,rgba(0,0,0,0.97) 100%)}
-.hero-glow-l,.hero-glow-r{position:absolute;top:10%;bottom:10%;width:70px;pointer-events:none;z-index:2}
-.hero-glow-l{left:-15px;background:radial-gradient(ellipse,rgba(0,220,130,0.18),transparent);filter:blur(20px)}
-.hero-glow-r{right:-15px;background:radial-gradient(ellipse,rgba(0,220,130,0.18),transparent);filter:blur(20px)}
-.hero-content{position:absolute;bottom:0;left:0;right:0;padding:20px 20px 42px;z-index:5}
-.hero-badge{display:inline-flex;align-items:center;gap:5px;background:var(--primary);color:#000;font-size:10px;font-weight:800;padding:4px 10px;border-radius:20px;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.8px}
-.hero-title{font-size:26px;font-weight:800;letter-spacing:-0.5px;margin-bottom:8px;line-height:1.2}
-.hero-meta{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:10px}
-.hero-meta span{font-size:13px;font-weight:600;color:var(--text-2)}
-.hero-meta .dot{width:3px;height:3px;border-radius:50%;background:var(--text-3)}
-.hero-desc{font-size:13px;line-height:1.5;color:var(--text-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:18px;max-width:500px}
-.hero-actions{display:flex;gap:10px}
-.hero-dots{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10}
-.hero-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.3);cursor:pointer;transition:all 0.3s}
-.hero-dot.active{background:var(--primary);width:24px;border-radius:4px}
-.btn-primary{padding:13px 28px;border:none;border-radius:var(--radius-pill);background:var(--primary);color:#000;font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;transition:all 0.2s}
-.btn-primary:active{transform:scale(0.95);opacity:0.9}
-.btn-secondary{padding:13px 28px;border:1px solid var(--glass-border);border-radius:var(--radius-pill);background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:var(--text);font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;transition:all 0.2s}
-.btn-secondary:active{transform:scale(0.95);background:rgba(255,255,255,0.12)}
-.section{padding:12px 0 20px;animation:fadeInUp 0.3s ease}
-.section-header{display:flex;align-items:center;justify-content:space-between;padding:0 18px 12px}
-.section-title{font-size:18px;font-weight:700}
-.poster-scroll{display:flex;gap:12px;padding:4px 18px 8px;overflow-x:auto;scrollbar-width:none}
-.poster-scroll::-webkit-scrollbar{display:none}
-.poster-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:12px;padding:4px 18px 8px}
-.poster-card{flex-shrink:0;width:132px;cursor:pointer;transition:transform 0.25s cubic-bezier(0.4,0,0.2,1)}
-.poster-card:active{transform:scale(0.94)}
-.poster-grid .poster-card{width:100%}
-.poster-img-wrap{position:relative;width:100%;aspect-ratio:0.675;border-radius:var(--radius);overflow:hidden;background:var(--card)}
-.poster-img-wrap img{width:100%;height:100%;object-fit:cover;transition:transform 0.3s ease}
-.poster-badge{position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--primary);font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px}
-.poster-quality{position:absolute;top:6px;left:6px;background:rgba(0,220,130,0.9);color:#000;font-size:9px;font-weight:800;padding:2px 5px;border-radius:4px}
-.poster-name{margin-top:8px;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.poster-sub{font-size:11px;color:var(--text-3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.continue-card{flex-shrink:0;width:180px;cursor:pointer}
-.continue-img-wrap{position:relative;width:100%;aspect-ratio:16/9;border-radius:var(--radius);overflow:hidden;background:var(--card)}
-.continue-img-wrap img{width:100%;height:100%;object-fit:cover}
-.continue-progress{position:absolute;bottom:0;left:0;height:3px;background:var(--primary);border-radius:0 2px 0 0}
-.continue-play-btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:38px;height:38px;border-radius:50%;background:rgba(0,220,130,0.85);display:flex;align-items:center;justify-content:center}
-.continue-info{margin-top:8px}
-.continue-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.continue-ep{font-size:11px;color:var(--text-3);margin-top:2px}
-.continue-remove{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,0.7);color:var(--text-2);font-size:11px;display:flex;align-items:center;justify-content:center}
-.skeleton{background:linear-gradient(90deg,rgba(255,255,255,0.03) 0%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.03) 100%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--radius)}
-.skeleton-poster{width:132px;height:190px;border-radius:var(--radius);flex-shrink:0}
-.skeleton-hero{width:100%;height:440px;border-radius:0 0 28px 28px}
-.skeleton-row{display:flex;gap:12px;padding:4px 18px}
-.error-state{text-align:center;padding:32px 20px}
-.error-state .error-icon{font-size:36px;margin-bottom:12px}
-.error-state p{color:var(--text-3);margin-bottom:16px;font-size:14px}
-.retry-btn{padding:10px 24px;border:none;border-radius:var(--radius-pill);background:var(--primary);color:#000;font-size:14px;font-weight:700}
-.load-sentinel{width:100%;padding:20px;text-align:center}
-.load-sentinel .spinner{margin:0 auto}
-.empty-state{text-align:center;padding:48px 20px}
-.empty-state .empty-icon{font-size:48px;margin-bottom:16px}
-.empty-state h3{font-size:18px;font-weight:700;margin-bottom:8px}
-.empty-state p{color:var(--text-3);font-size:14px}
-#detailPage{display:none;min-height:100vh;min-height:100svh}
-.detail-hero{position:relative;width:100%;height:420px;overflow:hidden}
-.detail-hero img{width:100%;height:100%;object-fit:cover}
-.detail-hero-gradient{position:absolute;bottom:0;left:0;right:0;height:220px;background:linear-gradient(transparent,rgba(0,0,0,0.98))}
-.detail-top-btns{position:absolute;top:16px;left:16px;right:16px;display:flex;justify-content:space-between;z-index:10}
-.detail-top-btn{width:44px;height:44px;border:none;border-radius:50%;background:rgba(0,0,0,0.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:var(--text);font-size:18px;display:flex;align-items:center;justify-content:center}
-.detail-info{padding:0 20px 32px;margin-top:-80px;position:relative;z-index:5}
-.detail-logo{max-height:80px;max-width:65%;object-fit:contain;object-position:left bottom;margin-bottom:14px}
-.detail-title-text{font-size:26px;font-weight:800;letter-spacing:-0.5px;margin-bottom:10px}
-.detail-meta-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px}
-.detail-meta-item{font-size:14px;font-weight:600;color:var(--text-2)}
-.detail-badge{padding:3px 9px;border:1px solid rgba(255,255,255,0.3);border-radius:6px;font-size:11px;font-weight:700;color:var(--text-2)}
-.detail-imdb{background:#F5C518;color:#000;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:800}
-.detail-tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
-.detail-tag{padding:5px 12px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-2)}
-.detail-tag.vj-tag{background:rgba(0,220,130,0.1);border-color:rgba(0,220,130,0.2);color:var(--primary)}
-.detail-desc{font-size:15px;line-height:1.65;color:var(--text-2);margin-bottom:22px}
-.detail-actions{display:flex;gap:10px;margin-bottom:24px}
-.detail-actions .btn-primary{flex:1;max-width:260px;justify-content:center}
-.action-circle-btn{width:52px;height:52px;border:1px solid var(--glass-border);border-radius:50%;background:var(--glass);color:var(--text);font-size:20px;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
-.action-circle-btn:active{transform:scale(0.9)}
-.action-circle-btn.active{background:rgba(255,71,87,0.15)!important;border-color:rgba(255,71,87,0.3)!important;color:var(--error)!important}
-.sub-section-title{font-size:16px;font-weight:700;margin-bottom:12px}
-.stream-option{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:var(--radius);background:rgba(255,255,255,0.04);border:1px solid transparent;margin-bottom:8px;cursor:pointer;transition:all 0.2s}
-.stream-option:active{background:rgba(255,255,255,0.08)}
-.stream-option.active{background:rgba(0,220,130,0.08);border-color:rgba(0,220,130,0.25)}
-.stream-icon-wrap{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:16px}
-.stream-option.active .stream-icon-wrap{background:rgba(0,220,130,0.15)}
-.stream-info{flex:1;min-width:0}
-.stream-name{font-size:14px;font-weight:600}
-.stream-sub{font-size:12px;color:var(--text-3);margin-top:2px}
-.stream-speed{font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:0.5px}
-.stream-speed.fast{background:rgba(0,220,130,0.15);color:var(--primary)}
-.stream-speed.normal{background:rgba(255,165,2,0.15);color:var(--warning)}
-.season-tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-bottom:14px}
+.hero-slide-overlay{position:absolute;inset:0;background:linear-gradient(to top,var(--bg) 0%,rgba(13,13,26,.3) 50%,rgba(13,13,26,.1) 100%)}
+.hero-content{position:absolute;bottom:80px;left:40px;right:40px;z-index:2;max-width:600px}
+.hero-content h1{font-size:clamp(24px,5vw,48px);font-weight:800;line-height:1.1;margin-bottom:12px;text-shadow:0 2px 10px rgba(0,0,0,.8)}
+.hero-content p{font-size:clamp(13px,2vw,16px);color:var(--txt2);line-height:1.5;margin-bottom:20px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 1px 5px rgba(0,0,0,.8)}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap}
+.btn-primary{padding:12px 28px;border-radius:var(--r);background:var(--accent);color:#fff;border:none;font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;transition:all .2s}
+.btn-primary:hover{background:var(--accent2);transform:scale(1.03)}
+.btn-secondary{padding:12px 28px;border-radius:var(--r);background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.2);font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px;transition:all .2s;backdrop-filter:blur(4px)}
+.btn-secondary:hover{background:rgba(255,255,255,.25)}
+.hero-nav{position:absolute;bottom:30px;right:40px;display:flex;gap:8px;z-index:3}
+.hero-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.3);cursor:pointer;transition:all .3s;border:none}
+.hero-dot.active{background:var(--accent);width:30px;border-radius:5px}
+.hero-arrows{position:absolute;top:50%;left:0;right:0;display:flex;justify-content:space-between;padding:0 16px;z-index:3;pointer-events:none}
+.hero-arrow{pointer-events:auto;width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;border:none;font-size:20px;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);transition:all .2s}
+.hero-arrow:hover{background:rgba(0,0,0,.8);transform:scale(1.1)}
+
+/* Category Tabs */
+.category-bar{padding:0 20px 20px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}
+.category-bar::-webkit-scrollbar{display:none}
+.cat-tab{padding:8px 18px;border-radius:20px;background:var(--bg2);color:var(--txt2);border:1px solid var(--bg3);font-size:13px;white-space:nowrap;cursor:pointer;transition:all .2s}
+.cat-tab:hover,.cat-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* Content Sections */
+.content-section{padding:10px 20px 30px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.section-title{font-size:20px;font-weight:700}
+.section-more{font-size:13px;color:var(--accent);cursor:pointer}
+.movie-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px}
+.movie-scroll{display:flex;gap:12px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none;-ms-overflow-style:none}
+.movie-scroll::-webkit-scrollbar{display:none}
+.movie-scroll .movie-card{flex:0 0 160px}
+
+/* Movie Card */
+.movie-card{cursor:pointer;border-radius:var(--r);overflow:hidden;transition:transform .3s,box-shadow .3s;position:relative}
+.movie-card:hover{transform:translateY(-6px) scale(1.02);box-shadow:var(--shadow)}
+.movie-card img{width:100%;aspect-ratio:2/3;object-fit:cover;border-radius:var(--r)}
+.movie-card-overlay{position:absolute;bottom:0;left:0;right:0;padding:30px 10px 10px;background:linear-gradient(to top,rgba(0,0,0,.9),transparent);border-radius:0 0 var(--r) var(--r)}
+.movie-card-title{font-size:12px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.movie-card-year{font-size:11px;color:var(--txt2);margin-top:2px}
+.movie-card-rating{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.7);padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;backdrop-filter:blur(4px)}
+.movie-card-vj{position:absolute;top:8px;left:8px;background:var(--accent);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+
+/* Detail Overlay */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:5000;display:none;overflow-y:auto;backdrop-filter:blur(8px)}
+.overlay.show{display:block}
+.detail-content{max-width:900px;margin:40px auto;background:var(--bg2);border-radius:16px;overflow:hidden;position:relative;animation:slideUp .3s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.detail-close{position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;font-size:18px;z-index:10;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.detail-hero{position:relative}
+.detail-backdrop{width:100%;aspect-ratio:16/9;object-fit:cover}
+.detail-hero-overlay{position:absolute;inset:0;background:linear-gradient(to top,var(--bg2) 0%,transparent 60%)}
+.detail-body{padding:24px;margin-top:-60px;position:relative;z-index:2}
+.detail-poster-row{display:flex;gap:20px;margin-bottom:20px}
+.detail-poster{width:140px;flex-shrink:0;border-radius:var(--r);box-shadow:var(--shadow)}
+.detail-meta{flex:1}
+.detail-title{font-size:28px;font-weight:800;margin-bottom:8px}
+.detail-badges{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.badge{padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600}
+.badge-rating{background:rgba(229,9,20,.2);color:var(--accent)}
+.badge-year{background:rgba(255,255,255,.1);color:var(--txt2)}
+.badge-type{background:rgba(59,130,246,.2);color:#3B82F6}
+.badge-genre{background:rgba(168,85,247,.2);color:#A855F7}
+.detail-desc{font-size:14px;color:var(--txt2);line-height:1.7;margin-bottom:20px}
+.detail-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}
+
+/* VJ Selection */
+.vj-section{margin-bottom:24px;padding:16px;background:var(--bg3);border-radius:var(--r);border:1px solid rgba(255,255,255,.05)}
+.vj-section h4{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.vj-section h4::before{content:"";width:3px;height:16px;background:var(--accent);border-radius:2px}
+.vj-chips{display:flex;gap:8px;flex-wrap:wrap}
+.vj-chip{padding:8px 18px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;border:1px solid var(--bg3);background:var(--bg2);color:var(--txt2)}
+.vj-chip:hover{border-color:var(--accent);color:var(--txt)}
+.vj-chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.vj-chip-label{font-size:10px;opacity:.7;display:block;margin-top:2px}
+
+/* Episodes */
+.episodes-container{padding:0 24px 24px}
+.episodes-container h3{font-size:20px;font-weight:700;margin-bottom:16px}
+.season-tabs{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;scrollbar-width:none}
 .season-tabs::-webkit-scrollbar{display:none}
-.season-tab{flex-shrink:0;padding:8px 18px;border:none;border-radius:var(--radius-pill);background:rgba(255,255,255,0.07);color:var(--text-2);font-size:13px;font-weight:600;transition:all 0.25s;white-space:nowrap}
-.season-tab.active{background:var(--primary);color:#000;box-shadow:0 4px 12px rgba(0,220,130,0.25)}
-.episode-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius);background:rgba(255,255,255,0.03);margin-bottom:6px;cursor:pointer;transition:all 0.2s}
-.episode-item:active{background:rgba(255,255,255,0.08)}
-.episode-item.playing{background:rgba(0,220,130,0.1);border:1px solid rgba(0,220,130,0.2)}
-.ep-num{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
-.episode-item.playing .ep-num{background:var(--primary);color:#000}
-.ep-info{flex:1;min-width:0}
-.ep-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ep-date{font-size:12px;color:var(--text-3);margin-top:2px}
-.ep-play-icon{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-#playerPage{display:none;height:100vh;height:100svh;flex-direction:column;background:var(--bg)}
-#playerPage.active{display:flex}
-.player-video-wrap{flex-shrink:0;width:100%;background:#000;position:relative}
-.player-video-wrap video{width:100%;display:block;aspect-ratio:16/9;background:#000}
-.player-video-topbar{position:absolute;top:0;left:0;right:0;padding:10px 14px;display:flex;align-items:center;gap:10px;background:linear-gradient(to bottom,rgba(0,0,0,0.6),transparent);z-index:10;opacity:0;transition:opacity 0.3s}
-.player-video-wrap:hover .player-video-topbar{opacity:1}
-.player-back-btn{width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.5);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.player-scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:120px}
-.player-info-bar{padding:16px 18px 0}
-.player-title-main{font-size:18px;font-weight:700;margin-bottom:4px}
-.player-title-sub{font-size:13px;color:var(--text-3);margin-bottom:14px}
-.player-action-row{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
-.player-act-btn{padding:9px 16px;border:1px solid var(--glass-border);border-radius:var(--radius-pill);background:var(--glass);color:var(--text);font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
-.player-act-btn:active{background:rgba(255,255,255,0.1)}
-.player-act-btn.dl-btn{background:rgba(0,220,130,0.1);border-color:rgba(0,220,130,0.2);color:var(--primary)}
-.player-tabs{display:flex;gap:4px;padding:0 18px;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.06)}
-.player-tab{padding:10px 18px;background:none;color:var(--text-3);font-size:13px;font-weight:600;position:relative;transition:color 0.2s}
-.player-tab.active{color:var(--primary)}
-.player-tab.active::after{content:"";position:absolute;bottom:-1px;left:10px;right:10px;height:2px;background:var(--primary);border-radius:2px}
-.player-tab-content{display:none;padding:0 18px}
-.player-tab-content.active{display:block}
-.player-ep-actions-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-.player-ep-select-btn{padding:8px 14px;border:1px solid var(--glass-border);border-radius:var(--radius-pill);background:var(--glass);color:var(--text-2);font-size:12px;font-weight:600}
-.player-ep-select-btn:active{background:rgba(255,255,255,0.1)}
-.player-ep-select-btn.primary{background:var(--primary);color:#000;border-color:var(--primary)}
-.player-ep-item{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:var(--radius);background:rgba(255,255,255,0.03);margin-bottom:6px;cursor:pointer;transition:all 0.2s}
-.player-ep-item:active{background:rgba(255,255,255,0.08)}
-.player-ep-item.playing{background:rgba(0,220,130,0.1);border:1px solid rgba(0,220,130,0.2)}
-.player-ep-check{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s}
-.player-ep-check.checked{background:var(--primary);border-color:var(--primary)}
-.player-ep-check.checked::after{content:"";width:8px;height:5px;border-left:2px solid #000;border-bottom:2px solid #000;transform:rotate(-45deg);margin-top:-2px}
-.player-ep-num{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
-.player-ep-item.playing .player-ep-num{background:var(--primary);color:#000}
-.player-ep-info{flex:1;min-width:0}
-.player-ep-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.player-ep-date{font-size:10px;color:var(--text-3);margin-top:2px}
-.player-ep-now{font-size:9px;color:var(--primary);font-weight:700;text-transform:uppercase}
-.player-ep-dl-btn{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.player-ep-dl-btn:active{background:rgba(0,220,130,0.15)}
-.player-related-note{font-size:12px;color:var(--text-3);margin-bottom:12px;padding:0 2px}
-#downloadFab{position:fixed;bottom:24px;right:24px;z-index:500;width:52px;height:52px;border-radius:50%;background:var(--primary);color:#000;display:none;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,220,130,0.3)}
-#downloadFab.show{display:flex}
-#downloadFab .dl-badge{position:absolute;top:-4px;right:-4px;width:20px;height:20px;border-radius:50%;background:var(--error);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center}
-#downloadPanel{position:fixed;bottom:0;left:0;right:0;z-index:1000;background:rgba(12,12,16,0.98);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:20px 20px 0 0;max-height:70vh;display:none;flex-direction:column;animation:slideUp 0.3s ease}
-#downloadPanel.show{display:flex}
-.dl-panel-header{padding:18px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.06)}
-.dl-panel-title{font-size:16px;font-weight:700}
-.dl-panel-close{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.08);color:var(--text-2);display:flex;align-items:center;justify-content:center;font-size:14px}
-.dl-list{flex:1;overflow-y:auto;padding:12px 20px;max-height:50vh}
-.dl-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
-.dl-item-info{flex:1;min-width:0}
-.dl-item-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dl-item-status{font-size:11px;color:var(--text-3);margin-top:3px;display:flex;justify-content:space-between}
-.dl-progress-wrap{width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:6px;overflow:hidden}
-.dl-progress-fill{height:100%;background:var(--primary);border-radius:2px;transition:width 0.3s}
-.dl-item.done .dl-progress-fill{background:var(--primary)}
-.dl-item.error .dl-progress-fill{background:var(--error)}
-.dl-item-status-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px}
-.dl-item-status-icon.queued{background:rgba(255,165,2,0.15);color:var(--warning)}
-.dl-item-status-icon.downloading{background:rgba(0,220,130,0.15);color:var(--primary)}
-.dl-item-status-icon.done{background:rgba(0,220,130,0.15);color:var(--primary)}
-.dl-item-status-icon.error{background:rgba(255,71,87,0.15);color:var(--error)}
-.dl-panel-actions{padding:12px 20px 20px;display:flex;gap:10px;border-top:1px solid rgba(255,255,255,0.06)}
-.dl-panel-btn{flex:1;padding:12px;border:1px solid var(--glass-border);border-radius:var(--radius);background:var(--glass);color:var(--text);font-size:13px;font-weight:600;text-align:center}
-.dl-panel-btn:active{background:rgba(255,255,255,0.1)}
-.dl-panel-btn.primary{background:var(--primary);color:#000;border-color:var(--primary)}
-#trailerModal{display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);align-items:center;justify-content:center;padding:20px}
-#trailerModal.active{display:flex;animation:fadeIn 0.25s ease}
-.trailer-content{width:100%;max-width:800px;aspect-ratio:16/9;border-radius:var(--radius);overflow:hidden;background:#000}
-.trailer-content iframe{width:100%;height:100%;border:none}
-.trailer-close{position:absolute;top:20px;right:20px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.1);color:var(--text);font-size:20px;display:flex;align-items:center;justify-content:center}
-.watchlist-active{background:rgba(255,71,87,0.15)!important;border-color:rgba(255,71,87,0.3)!important;color:var(--error)!important}
-.home-content{padding-bottom:100px}
-.page-enter{animation:fadeInUp 0.3s ease}
-@media(min-width:768px){.poster-scroll{gap:16px}.poster-card{width:150px}.hero-carousel{height:520px}.hero-title{font-size:32px}.detail-hero{height:500px}.detail-title-text{font-size:32px}}
-@media(min-width:1024px){.poster-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}}
-@media(min-width:1200px){.poster-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}}
+.season-tab{padding:8px 16px;border-radius:20px;background:var(--bg3);color:var(--txt2);border:1px solid rgba(255,255,255,.05);font-size:13px;cursor:pointer;white-space:nowrap;transition:all .2s}
+.season-tab.active{background:var(--accent);color:#fff}
+.batch-actions{display:flex;gap:8px;margin-bottom:12px}
+.batch-btn{padding:6px 14px;border-radius:16px;background:var(--bg3);color:var(--txt2);border:1px solid rgba(255,255,255,.1);font-size:12px;cursor:pointer;transition:all .2s}
+.batch-btn:hover{background:var(--accent);color:#fff}
+.episode-list{display:flex;flex-direction:column;gap:10px}
+.episode-item{display:flex;gap:14px;padding:12px;background:var(--bg3);border-radius:var(--r);cursor:pointer;transition:all .2s;align-items:center;border:1px solid transparent}
+.episode-item:hover{border-color:var(--accent);background:rgba(229,9,20,.1)}
+.episode-item.selected{border-color:var(--accent);background:rgba(229,9,20,.15)}
+.episode-check{width:20px;height:20px;border:2px solid var(--txt3);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s}
+.episode-check.checked{background:var(--accent);border-color:var(--accent)}
+.episode-check.checked::after{content:"\2713";color:#fff;font-size:12px;font-weight:700}
+.episode-thumb{width:120px;height:68px;object-fit:cover;border-radius:6px;flex-shrink:0}
+.episode-info{flex:1}
+.episode-info h4{font-size:14px;font-weight:600;margin-bottom:4px}
+.episode-info p{font-size:12px;color:var(--txt2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.episode-num{position:absolute;top:4px;left:4px;background:rgba(0,0,0,.7);padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600}
+.episode-dl{padding:6px 12px;border-radius:14px;background:var(--bg2);color:var(--accent);border:1px solid var(--accent);font-size:11px;cursor:pointer;white-space:nowrap;transition:all .2s}
+.episode-dl:hover{background:var(--accent);color:#fff}
+
+/* Player */
+.player-overlay{position:fixed;inset:0;background:var(--bg);z-index:6000;display:none;flex-direction:column;overflow-y:auto}
+.player-overlay.show{display:flex}
+.player-header{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg2);position:sticky;top:0;z-index:10}
+.player-back{width:36px;height:36px;border-radius:50%;background:var(--bg3);color:#fff;border:none;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.player-title-bar{flex:1;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-actions-bar{display:flex;gap:8px}
+.player-action-btn{width:36px;height:36px;border-radius:50%;background:var(--bg3);color:#fff;border:none;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s}
+.player-action-btn:hover{background:var(--accent)}
+.video-wrapper{width:100%;background:#000;position:relative}
+.video-wrapper video{width:100%;max-height:60vh;display:block}
+.video-wrapper.sticky{position:sticky;top:56px;z-index:5}
+
+/* Player VJ */
+.player-vj-bar{padding:12px 16px;background:var(--bg2);display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.05)}
+.player-vj-label{font-size:13px;font-weight:600;color:var(--txt2);white-space:nowrap}
+.player-vj-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1}
+.player-vj-chips::-webkit-scrollbar{display:none}
+.player-vj-chip{padding:6px 14px;border-radius:16px;font-size:12px;cursor:pointer;white-space:nowrap;transition:all .2s;background:var(--bg3);color:var(--txt2);border:1px solid transparent}
+.player-vj-chip:hover{border-color:var(--accent)}
+.player-vj-chip.active{background:var(--accent);color:#fff}
+
+.player-info{padding:16px}
+.player-info h3{font-size:18px;font-weight:700;margin-bottom:8px}
+.player-info p{font-size:13px;color:var(--txt2);line-height:1.6}
+
+/* Player Download */
+.player-dl-bar{padding:12px 16px;display:flex;gap:10px;flex-wrap:wrap}
+.dl-btn{padding:10px 20px;border-radius:var(--r);background:var(--accent);color:#fff;border:none;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;cursor:pointer;transition:all .2s}
+.dl-btn:hover{background:var(--accent2)}
+.dl-btn.secondary{background:var(--bg3);border:1px solid rgba(255,255,255,.1)}
+
+/* Player Episodes */
+.player-episodes{padding:16px}
+.player-episodes h4{font-size:16px;font-weight:700;margin-bottom:12px}
+.player-ep-list{display:flex;flex-direction:column;gap:8px}
+.player-ep-item{display:flex;gap:12px;padding:10px;background:var(--bg2);border-radius:var(--r);cursor:pointer;transition:all .2s;align-items:center}
+.player-ep-item:hover{background:var(--bg3)}
+.player-ep-item.current{border-left:3px solid var(--accent)}
+.player-ep-item img{width:100px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0}
+.player-ep-item-info h5{font-size:13px;font-weight:600;margin-bottom:2px}
+.player-ep-item-info p{font-size:11px;color:var(--txt2)}
+.player-ep-item-actions{display:flex;gap:6px;margin-left:auto}
+
+/* Download Panel */
+.download-panel{position:fixed;top:0;right:-400px;width:380px;height:100vh;background:var(--bg2);z-index:7000;transition:right .3s ease;box-shadow:-4px 0 20px rgba(0,0,0,.5);display:flex;flex-direction:column}
+.download-panel.show{right:0}
+.download-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.05)}
+.download-header h3{font-size:18px;font-weight:700}
+.download-close{width:32px;height:32px;border-radius:50%;background:var(--bg3);color:#fff;border:none;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.download-list{flex:1;overflow-y:auto;padding:12px}
+.dl-entry{padding:14px;background:var(--bg3);border-radius:var(--r);margin-bottom:10px}
+.dl-entry-title{font-size:13px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.dl-entry-title button{background:none;border:none;color:var(--txt3);cursor:pointer;font-size:16px;padding:2px}
+.dl-entry-title button:hover{color:var(--accent)}
+.dl-progress-bar{width:100%;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;margin:8px 0}
+.dl-progress-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .3s;width:0%}
+.dl-progress-fill.complete{background:#22C55E}
+.dl-progress-fill.error{background:#EF4444}
+.dl-entry-status{font-size:11px;color:var(--txt2)}
+.dl-entry-status.complete{color:#22C55E}
+.dl-entry-status.error{color:#EF4444}
+.no-downloads{text-align:center;color:var(--txt3);padding:40px 20px;font-size:14px}
+
+/* Continue Watching */
+.cw-card{flex:0 0 220px;cursor:pointer;position:relative;border-radius:var(--r);overflow:hidden}
+.cw-card img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:var(--r)}
+.cw-overlay{position:absolute;bottom:0;left:0;right:0;padding:24px 8px 8px;background:linear-gradient(to top,rgba(0,0,0,.9),transparent)}
+.cw-title{font-size:12px;font-weight:600;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.cw-progress-bar{width:100%;height:3px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden}
+.cw-progress-fill{height:100%;background:var(--accent);border-radius:2px}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--bg3);color:var(--txt);padding:12px 24px;border-radius:var(--r);font-size:14px;z-index:99999;transition:transform .3s ease;box-shadow:var(--shadow);pointer-events:none;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{background:#EF4444}
+.toast.success{background:#22C55E}
+
+/* Bottom Nav (Mobile) */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid rgba(255,255,255,.05);z-index:1000;padding:8px 0 env(safe-area-inset-bottom)}
+.bottom-nav-inner{display:flex;justify-content:space-around}
+.bnav-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 12px;color:var(--txt3);cursor:pointer;transition:color .2s;font-size:10px}
+.bnav-item.active{color:var(--accent)}
+.bnav-item span:first-child{font-size:20px}
+
+/* Scroll Loader */
+.scroll-loader{text-align:center;padding:30px;display:none}
+.scroll-loader.show{display:block}
+
+/* Responsive */
+@media(max-width:768px){
+  .header{padding:10px 12px;gap:10px}
+  .nav-links{display:none}
+  .logo{font-size:18px}
+  .hero{height:60vh;min-height:350px}
+  .hero-content{bottom:60px;left:20px;right:20px}
+  .hero-nav{right:20px;bottom:20px}
+  .content-section{padding:10px 12px 24px}
+  .movie-row{grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:10px}
+  .movie-scroll .movie-card{flex:0 0 120px}
+  .detail-poster-row{flex-direction:column}
+  .detail-poster{width:100px}
+  .detail-title{font-size:22px}
+  .bottom-nav{display:block}
+  body{padding-bottom:60px}
+  .download-panel{width:100%;right:-100%}
+  .vj-section{margin:16px 0;padding:12px}
+}
 </style>
 </head>
 <body>
 
-<div id="statusBar"></div>
-<div id="toastContainer"></div>
-
-<div id="loadingOverlay">
-  <div class="loader-logo">Omega<span>Stream</span></div>
-  <div class="spinner"></div>
-  <p>Loading your entertainment...</p>
+<!-- Loader -->
+<div class="loader-screen" id="loaderScreen">
+  <div class="loader-spinner"></div>
+  <div class="loader-text">Loading OmegaStream...</div>
 </div>
 
-<!-- HOME PAGE -->
-<div id="homePage">
-  <div class="header">
-    <div class="header-logo">Omega<span>Stream</span></div>
-    <div class="header-actions">
-      <button class="icon-btn" onclick="toggleSearch()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-      </button>
+<!-- Header -->
+<header class="header" id="mainHeader">
+  <div class="logo" onclick="goHome()"><span>Omega</span>Stream</div>
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input class="search-input" id="searchInput" placeholder="Search movies, series..." autocomplete="off">
+    <div class="search-dropdown" id="searchDropdown"></div>
+  </div>
+  <nav class="nav-links">
+    <a class="nav-link active" onclick="goHome()" id="navHome">Home</a>
+    <a class="nav-link" onclick="showCategory('movie')">Movies</a>
+    <a class="nav-link" onclick="showCategory('series')">Series</a>
+    <a class="nav-link" onclick="showWatchlistSection()">My List</a>
+  </nav>
+  <button class="header-dl" onclick="toggleDownloadPanel()">
+    &#11015; <span class="dl-text">DL</span>
+    <div class="dl-badge" id="dlBadge" style="display:none">0</div>
+  </button>
+</header>
+
+<!-- Hero -->
+<section class="hero" id="heroSection">
+  <div class="hero-slides" id="heroSlides"></div>
+  <div class="hero-content" id="heroContent">
+    <h1 id="heroTitle"></h1>
+    <p id="heroDesc"></p>
+    <div class="hero-actions">
+      <button class="btn-primary" onclick="heroPlay()">&#9654; Play</button>
+      <button class="btn-secondary" onclick="heroInfo()">&#9432; More Info</button>
     </div>
   </div>
-  <div id="searchBar">
-    <div class="search-wrap">
-      <span class="search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></span>
-      <input id="searchInput" type="text" placeholder="Search movies, series, VJ..." oninput="onSearchInput(this.value)" onkeydown="if(event.key==='Enter')onSearchSubmit(this.value)" autocomplete="off">
-    </div>
-    <div id="searchSuggestions"></div>
+  <div class="hero-arrows">
+    <button class="hero-arrow" onclick="prevHeroSlide()">&#10094;</button>
+    <button class="hero-arrow" onclick="nextHeroSlide()">&#10095;</button>
   </div>
-  <div class="category-tabs" id="categoryTabs"></div>
-  <div class="home-content" id="homeContent"></div>
+  <div class="hero-nav" id="heroDots"></div>
+</section>
+
+<!-- Category Tabs -->
+<div class="category-bar" id="categoryBar">
+  <button class="cat-tab active" onclick="filterGenre('all',this)">All</button>
+  <button class="cat-tab" onclick="filterGenre('action',this)">Action</button>
+  <button class="cat-tab" onclick="filterGenre('comedy',this)">Comedy</button>
+  <button class="cat-tab" onclick="filterGenre('drama',this)">Drama</button>
+  <button class="cat-tab" onclick="filterGenre('horror',this)">Horror</button>
+  <button class="cat-tab" onclick="filterGenre('romance',this)">Romance</button>
+  <button class="cat-tab" onclick="filterGenre('sci-fi',this)">Sci-Fi</button>
+  <button class="cat-tab" onclick="filterGenre('thriller',this)">Thriller</button>
+  <button class="cat-tab" onclick="filterGenre('animation',this)">Animation</button>
+  <button class="cat-tab" onclick="filterGenre('documentary',this)">Documentary</button>
 </div>
 
-<!-- DETAIL PAGE -->
-<div id="detailPage">
-  <div class="detail-hero">
-    <div class="detail-top-btns">
-      <button class="detail-top-btn" onclick="showHome()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
-      <button class="detail-top-btn" onclick="toggleWatchlist()" id="detailWatchlistBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></button>
-    </div>
-    <img id="detailBg" src="" alt="">
-    <div class="detail-hero-gradient"></div>
-  </div>
-  <div class="detail-info">
-    <img id="detailLogo" class="detail-logo" src="" alt="" onerror="this.style.display='none'">
-    <div id="detailTitleText" class="detail-title-text" style="display:none"></div>
-    <div id="detailMetaRow" class="detail-meta-row"></div>
-    <div id="detailTags" class="detail-tags"></div>
-    <div class="detail-actions">
-      <button id="detailPlayBtn" class="btn-primary" onclick="onDetailPlay()"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> Play Now</button>
-      <button class="action-circle-btn" onclick="downloadCurrent()" title="Download"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button>
-      <button class="action-circle-btn" onclick="playTrailer()" id="trailerBtn" title="Trailer" style="display:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/></svg></button>
-    </div>
-    <div id="detailDesc" class="detail-desc"></div>
-    <div id="streamSelector"></div>
-    <div id="episodeSection"></div>
-  </div>
-</div>
+<!-- Main Content -->
+<main id="mainContent">
 
-<!-- PLAYER PAGE -->
-<div id="playerPage">
-  <div class="player-video-wrap" id="playerVideoWrap">
-    <div class="player-video-topbar">
-      <button class="player-back-btn" onclick="backToDetail()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+  <!-- Continue Watching -->
+  <section class="content-section" id="continueSection" style="display:none">
+    <div class="section-header">
+      <h2 class="section-title">Continue Watching</h2>
     </div>
-    <video id="videoPlayer" controls playsinline preload="metadata"></video>
+    <div class="movie-scroll" id="continueGrid"></div>
+  </section>
+
+  <!-- My List -->
+  <section class="content-section" id="watchlistSection" style="display:none">
+    <div class="section-header">
+      <h2 class="section-title">My List</h2>
+    </div>
+    <div class="movie-row" id="watchlistGrid"></div>
+  </section>
+
+  <!-- Trending -->
+  <section class="content-section" id="trendingSection">
+    <div class="section-header">
+      <h2 class="section-title">Trending Now</h2>
+    </div>
+    <div class="movie-row" id="trendingGrid"></div>
+  </section>
+
+  <!-- Latest Movies -->
+  <section class="content-section" id="latestSection">
+    <div class="section-header">
+      <h2 class="section-title">Latest Movies</h2>
+    </div>
+    <div class="movie-row" id="latestGrid"></div>
+  </section>
+
+  <!-- VJ Movies -->
+  <section class="content-section" id="vjSection">
+    <div class="section-header">
+      <h2 class="section-title">VJ Movies</h2>
+    </div>
+    <div class="movie-row" id="vjGrid"></div>
+  </section>
+
+  <!-- Popular -->
+  <section class="content-section" id="popularSection">
+    <div class="section-header">
+      <h2 class="section-title">Popular</h2>
+    </div>
+    <div class="movie-row" id="popularGrid"></div>
+  </section>
+
+  <!-- Latest Series -->
+  <section class="content-section" id="seriesSection">
+    <div class="section-header">
+      <h2 class="section-title">Latest Series</h2>
+    </div>
+    <div class="movie-row" id="seriesGrid"></div>
+  </section>
+
+  <!-- Popular Series -->
+  <section class="content-section" id="popularSeriesSection">
+    <div class="section-header">
+      <h2 class="section-title">Popular Series</h2>
+    </div>
+    <div class="movie-row" id="popularSeriesGrid"></div>
+  </section>
+
+  <!-- Trending Series -->
+  <section class="content-section" id="trendingSeriesSection">
+    <div class="section-header">
+      <h2 class="section-title">Trending Series</h2>
+    </div>
+    <div class="movie-row" id="trendingSeriesGrid"></div>
+  </section>
+
+  <!-- Infinite Scroll Loader -->
+  <div class="scroll-loader" id="scrollLoader">
+    <div class="loader-spinner" style="width:30px;height:30px"></div>
   </div>
-  <div class="player-scroll-area" id="playerScrollArea">
-    <div class="player-info-bar">
-      <div class="player-title-main" id="playerTitle"></div>
-      <div class="player-title-sub" id="playerSub"></div>
-      <div class="player-action-row">
-        <button class="player-act-btn dl-btn" onclick="downloadCurrent()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-          Download
-        </button>
-        <button class="player-act-btn" onclick="togglePiP()">PiP</button>
-        <button class="player-act-btn" onclick="toggleWatchlistFromPlayer()" id="playerWlBtn">My List</button>
-        <button class="player-act-btn" onclick="playTrailer()" id="playerTrailerBtn" style="display:none">Trailer</button>
+
+</main>
+
+<!-- Detail Overlay -->
+<div class="overlay" id="detailOverlay">
+  <div class="detail-content">
+    <button class="detail-close" onclick="closeDetail()">&#10005;</button>
+    <div class="detail-hero">
+      <img class="detail-backdrop" id="detailBackdrop">
+      <div class="detail-hero-overlay"></div>
+    </div>
+    <div class="detail-body">
+      <div class="detail-poster-row">
+        <img class="detail-poster" id="detailPoster">
+        <div class="detail-meta">
+          <h1 class="detail-title" id="detailTitle"></h1>
+          <div class="detail-badges" id="detailBadges"></div>
+          <p class="detail-desc" id="detailDesc"></p>
+
+          <!-- VJ Selection -->
+          <div class="vj-section" id="vjSelector" style="display:none">
+            <h4>Select VJ / Audio Version</h4>
+            <div class="vj-chips" id="vjChips"></div>
+          </div>
+
+          <div class="detail-actions">
+            <button class="btn-primary" onclick="detailPlay()">&#9654; Play</button>
+            <button class="btn-secondary" onclick="detailDownload()">&#11015; Download</button>
+            <button class="btn-secondary" onclick="detailWatchlist()" id="detailWLBtn">&#43; My List</button>
+            <button class="btn-secondary" onclick="detailTrailer()">&#9654; Trailer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Episodes (for series) -->
+      <div class="episodes-container" id="episodesContainer" style="display:none">
+        <h3>Episodes</h3>
+        <div class="season-tabs" id="seasonTabs"></div>
+        <div class="batch-actions">
+          <button class="batch-btn" onclick="selectAllEpisodes()">&#9745; Select All</button>
+          <button class="batch-btn" onclick="deselectAllEpisodes()">&#9744; Deselect All</button>
+          <button class="batch-btn" onclick="downloadSelectedEpisodes()">&#11015; Download Selected</button>
+        </div>
+        <div class="episode-list" id="episodeList"></div>
       </div>
     </div>
-    <div class="player-tabs" id="playerTabs">
-      <button class="player-tab active" onclick="showPlayerTab('episodes')" id="ptabEpisodes">Episodes</button>
-      <button class="player-tab" onclick="showPlayerTab('related')">More Like This</button>
-      <button class="player-tab" onclick="showPlayerTab('info')">Info</button>
-    </div>
-    <div class="player-tab-content active" id="playerTabEpisodes">
-      <div id="playerEpisodeArea"><div class="empty-state"><p>No episodes for this title</p></div></div>
-    </div>
-    <div class="player-tab-content" id="playerTabRelated">
-      <div class="player-related-note">Similar titles you might enjoy</div>
-      <div id="playerRelatedGrid"></div>
-    </div>
-    <div class="player-tab-content" id="playerTabInfo">
-      <div id="playerInfoContent"></div>
-    </div>
   </div>
 </div>
 
-<!-- DOWNLOAD FAB + PANEL -->
-<button id="downloadFab" onclick="toggleDownloadPanel()">
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-  <div class="dl-badge" id="downloadBadge" style="display:none">0</div>
-</button>
-
-<div id="downloadPanel">
-  <div class="dl-panel-header">
-    <div class="dl-panel-title">Downloads</div>
-    <button class="dl-panel-close" onclick="toggleDownloadPanel()">&#10005;</button>
+<!-- Player Overlay -->
+<div class="player-overlay" id="playerOverlay">
+  <div class="player-header">
+    <button class="player-back" onclick="closePlayer()">&#8592;</button>
+    <div class="player-title-bar" id="playerTitleBar">Now Playing</div>
+    <div class="player-actions-bar">
+      <button class="player-action-btn" onclick="togglePiP()" title="Picture in Picture">&#9707;</button>
+      <button class="player-action-btn" onclick="downloadCurrentVideo()" title="Download">&#11015;</button>
+    </div>
   </div>
-  <div class="dl-list" id="downloadList"></div>
-  <div class="dl-panel-actions">
-    <button class="dl-panel-btn" onclick="clearCompletedDownloads()">Clear Done</button>
-    <button class="dl-panel-btn primary" onclick="processDownloadQueue()">Start All</button>
+  <div class="video-wrapper" id="videoWrapper">
+    <video id="videoPlayer" controls playsinline></video>
+  </div>
+
+  <!-- VJ in Player -->
+  <div class="player-vj-bar" id="playerVJBar" style="display:none">
+    <span class="player-vj-label">Audio/VJ:</span>
+    <div class="player-vj-chips" id="playerVJChips"></div>
+  </div>
+
+  <!-- Download bar in player -->
+  <div class="player-dl-bar">
+    <button class="dl-btn" onclick="downloadCurrentVideo()">&#11015; Download This Video</button>
+  </div>
+
+  <div class="player-info">
+    <h3 id="playerInfoTitle"></h3>
+    <p id="playerInfoDesc"></p>
+  </div>
+
+  <!-- Episodes in Player -->
+  <div class="player-episodes" id="playerEpisodes" style="display:none">
+    <h4>Episodes</h4>
+    <div class="player-ep-list" id="playerEpList"></div>
   </div>
 </div>
 
-<!-- TRAILER MODAL -->
-<div id="trailerModal">
-  <button class="trailer-close" onclick="closeTrailer()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-  <div class="trailer-content"><iframe id="trailerIframe" src="" allowfullscreen allow="autoplay; encrypted-media"></iframe></div>
+<!-- Download Panel -->
+<div class="download-panel" id="downloadPanel">
+  <div class="download-header">
+    <h3>Downloads</h3>
+    <button class="download-close" onclick="toggleDownloadPanel()">&#10005;</button>
+  </div>
+  <div class="download-list" id="downloadList">
+    <div class="no-downloads">No downloads yet</div>
+  </div>
 </div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <div class="bottom-nav-inner">
+    <div class="bnav-item active" onclick="goHome()">
+      <span>&#8962;</span><span>Home</span>
+    </div>
+    <div class="bnav-item" onclick="showCategory('movie')">
+      <span>&#127909;</span><span>Movies</span>
+    </div>
+    <div class="bnav-item" onclick="showCategory('series')">
+      <span>&#128250;</span><span>Series</span>
+    </div>
+    <div class="bnav-item" onclick="showWatchlistSection()">
+      <span>&#9825;</span><span>My List</span>
+    </div>
+    <div class="bnav-item" onclick="toggleDownloadPanel()">
+      <span>&#11015;</span><span>Downloads</span>
+    </div>
+  </div>
+</nav>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
 
 <script>
-// ================================================================
-// CONFIGURATION
-// ================================================================
-var WORKER_BASE = "https://moviebay-proxy.milesdaglas.workers.dev";
-var PROXY_URL = WORKER_BASE + "?url=";
-var VIDEO_PROXY = WORKER_BASE + "/video?url=";
+// ============================================================
+// CONFIG
+// ============================================================
 var API_BASE = "https://s-u.in";
-
-// ================================================================
-// CATEGORY TABS (TYPE + GENRE)
-// ================================================================
-var CATEGORY_TABS = [
-  { id: "all", name: "All" },
-  { id: "movies", name: "Movies", typeFilter: "movie" },
-  { id: "series", name: "Series", typeFilter: "series" },
-  { id: "sep1", name: "|" },
-  { id: "horror", name: "Horror", genres: ["horror"] },
-  { id: "action", name: "Action", genres: ["action"] },
-  { id: "comedy", name: "Comedy", genres: ["comedy"] },
-  { id: "scifi", name: "Sci-Fi", genres: ["science fiction", "sci-fi", "scifi"] },
-  { id: "kdrama", name: "K-Drama", genres: ["drama"], keywords: ["korean", "korea", "k-drama", "kdrama", "k drama"] },
-  { id: "romance", name: "Romance", genres: ["romance"] },
-  { id: "thriller", name: "Thriller", genres: ["thriller", "suspense"] },
-  { id: "animation", name: "Animation", genres: ["animation", "anime"] },
-  { id: "fantasy", name: "Fantasy", genres: ["fantasy"] },
-  { id: "crime", name: "Crime", genres: ["crime"] },
-  { id: "adventure", name: "Adventure", genres: ["adventure"] },
-  { id: "documentary", name: "Documentary", genres: ["documentary"] },
-  { id: "family", name: "Family", genres: ["family"] },
-  { id: "mystery", name: "Mystery", genres: ["mystery"] }
-];
-
-var currentCategoryFilter = "all";
-
-// ================================================================
-// CACHE LAYER
-// ================================================================
-var memCache = {};
-function cacheGet(key) {
-  if (memCache[key] && memCache[key].exp > Date.now()) return memCache[key].d;
-  try { var s = localStorage.getItem("os_" + key); if (s) { var p = JSON.parse(s); if (p && p.exp > Date.now()) { memCache[key] = p; return p.d; } } } catch (e) {}
-  return null;
-}
-function cacheSet(key, data, ttl) {
-  var entry = { d: data, exp: Date.now() + (ttl || 300000) };
-  memCache[key] = entry;
-  try { localStorage.setItem("os_" + key, JSON.stringify(entry)); } catch (e) {}
-}
-
-// ================================================================
-// FETCH WITH RETRY
-// ================================================================
-function fetchJson(url, retries) {
-  retries = retries || 3;
-  return new Promise(function(resolve, reject) {
-    var cached = cacheGet(url);
-    if (cached) { resolve(cached); return; }
-    function attempt(remaining, delay) {
-      setTimeout(function() {
-        fetch(url).then(function(resp) {
-          if (resp.status === 429) {
-            if (remaining > 0) { showStatus("Rate limited, retrying...", "warning"); attempt(remaining - 1, delay * 2); }
-            else reject(new Error("Rate limited"));
-            return;
-          }
-          if (!resp.ok) { if (remaining > 0) attempt(remaining - 1, delay * 2); else reject(new Error("HTTP " + resp.status)); return; }
-          return resp.json();
-        }).then(function(data) { if (data) { cacheSet(url, data, 300000); resolve(data); } })
-        .catch(function(err) { if (remaining > 0) attempt(remaining - 1, delay * 2); else reject(err); });
-      }, delay);
-    }
-    attempt(retries, 1000);
-  });
-}
-
-// ================================================================
-// URL UTILITIES
-// ================================================================
-function stripDownloadParam(url) {
-  if (!url) return url;
-  return url.replace(/[?&]download=\d+/gi, "").replace(/\?$/, "").replace(/\?&/, "?");
-}
-
-function resolveStreamUrl(rawUrl) {
-  if (!rawUrl) return rawUrl;
-  rawUrl = stripDownloadParam(rawUrl);
-  if (rawUrl.indexOf(".m3u8") !== -1 || rawUrl.indexOf("/stream/hls/") !== -1) return rawUrl;
-  if (rawUrl.indexOf("cdn.zflixtv.com") !== -1) return rawUrl;
-  if (rawUrl.indexOf(".mp4") !== -1 && rawUrl.indexOf("s-u.in") === -1) return rawUrl;
-  if (rawUrl.indexOf("s-u.in") !== -1) return VIDEO_PROXY + encodeURIComponent(rawUrl);
-  return rawUrl;
-}
-
-// ================================================================
-// STATUS BAR
-// ================================================================
-var statusTimer = null;
-function showStatus(msg, type) {
-  var bar = document.getElementById("statusBar");
-  bar.textContent = msg;
-  bar.className = "show" + (type === "error" ? " error" : type === "warning" ? " warning" : "");
-  if (statusTimer) clearTimeout(statusTimer);
-  statusTimer = setTimeout(hideStatus, 3500);
-}
-function hideStatus() { document.getElementById("statusBar").className = ""; }
-
-// ================================================================
-// TOAST
-// ================================================================
-function showToast(msg, type) {
-  var container = document.getElementById("toastContainer");
-  var toast = document.createElement("div");
-  toast.className = "toast";
-  var iconClass = type === "error" ? "error" : type === "info" ? "info" : "success";
-  var iconSymbol = type === "error" ? "!" : type === "info" ? "i" : "+";
-  toast.innerHTML = '<div class="toast-icon ' + iconClass + '">' + iconSymbol + '</div><div>' + msg + '</div>';
-  container.appendChild(toast);
-  setTimeout(function() { toast.classList.add("hiding"); setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300); }, 2800);
-}
-
-// ================================================================
-// STATE + DEDUP
-// ================================================================
-var currentDetail = null;
-var currentStreams = [];
-var currentSelectedStream = 0;
-var allEpisodes = [];
-var currentEpisodeIndex = -1;
-var currentSeason = 1;
-var searchTimeout = null;
-var saveInterval = null;
-
-var catalogSeenIds = {};
-var globalAllItems = [];
-var gridPool = [];
-var gridIndex = 0;
-var gridObserver = null;
-var GRID_BATCH = 15;
-
-function resetDedup() { catalogSeenIds = {}; globalAllItems = []; gridPool = []; gridIndex = 0; }
-function isSeen(id) { return !!catalogSeenIds[id]; }
-function markSeen(id) { catalogSeenIds[id] = true; }
-function addToGlobalPool(items) {
-  items.forEach(function(item) {
-    var gid = "g_" + item.id;
-    if (!isSeen(gid)) { markSeen(gid); globalAllItems.push(item); }
-  });
-}
-
-// ================================================================
-// WATCHLIST
-// ================================================================
-function getWatchlist() { try { return JSON.parse(localStorage.getItem("os_wl") || "[]"); } catch(e) { return []; } }
-function saveWatchlist(l) { try { localStorage.setItem("os_wl", JSON.stringify(l)); } catch(e) {} }
-function isWatchlisted(id) { return getWatchlist().some(function(i) { return i.id === id; }); }
-
-function toggleWatchlist() {
-  if (!currentDetail) return;
-  var list = getWatchlist();
-  var idx = -1;
-  for (var i = 0; i < list.length; i++) { if (list[i].id === currentDetail.id) { idx = i; break; } }
-  var btn = document.getElementById("detailWatchlistBtn");
-  if (idx >= 0) {
-    list.splice(idx, 1);
-    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>';
-    btn.classList.remove("watchlist-active");
-    showToast("Removed from My List", "info");
-  } else {
-    list.unshift({ id: currentDetail.id, type: currentDetail.type, name: currentDetail.name, poster: currentDetail.poster || "", vj: currentDetail.vj || "", releaseInfo: currentDetail.releaseInfo || "" });
-    btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="var(--error)" stroke="var(--error)" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>';
-    btn.classList.add("watchlist-active");
-    showToast("Added to My List", "success");
-  }
-  saveWatchlist(list);
-}
-
-function toggleWatchlistFromPlayer() {
-  if (!currentDetail) return;
-  toggleWatchlist();
-  var btn = document.getElementById("playerWlBtn");
-  if (btn) btn.textContent = isWatchlisted(currentDetail.id) ? "In My List" : "My List";
-}
-
-// ================================================================
-// CONTINUE WATCHING
-// ================================================================
-function getContinue() { try { return JSON.parse(localStorage.getItem("os_cont") || "[]"); } catch(e) { return []; } }
-
-function saveProgress() {
-  var v = document.getElementById("videoPlayer");
-  if (!currentDetail || !v || v.duration <= 0) return;
-  var epInfo = null;
-  if (currentEpisodeIndex >= 0 && currentEpisodeIndex < allEpisodes.length) {
-    var ep = allEpisodes[currentEpisodeIndex];
-    epInfo = "S" + ep.season + " E" + ep.number;
-    if (ep.name) epInfo += " - " + ep.name;
-  }
-  var prog = { id: currentDetail.id, type: currentDetail.type, name: currentDetail.name, poster: currentDetail.poster || currentDetail.background || "", episodeInfo: epInfo, episodeIndex: currentEpisodeIndex, currentTime: v.currentTime, duration: v.duration, timestamp: Date.now() };
-  var saved = getContinue().filter(function(p) { return p.id !== prog.id; });
-  saved.unshift(prog);
-  saved = saved.slice(0, 20);
-  try { localStorage.setItem("os_cont", JSON.stringify(saved)); } catch(e) {}
-}
-
-function removeContinue(id, ev) {
-  if (ev) ev.stopPropagation();
-  var saved = getContinue().filter(function(p) { return p.id !== id; });
-  try { localStorage.setItem("os_cont", JSON.stringify(saved)); } catch(e) {}
-  loadHome();
-  showToast("Removed from Continue Watching", "info");
-}
-
-function startSaveInterval() {
-  if (saveInterval) clearInterval(saveInterval);
-  saveInterval = setInterval(function() {
-    var v = document.getElementById("videoPlayer");
-    if (v && !v.paused && v.duration > 0) saveProgress();
-  }, 5000);
-}
-function stopSaveInterval() { if (saveInterval) { clearInterval(saveInterval); saveInterval = null; } }
-
-// ================================================================
-// DOWNLOAD MANAGER
-// ================================================================
-var downloadQueue = [];
-var isProcessingQueue = false;
-var selectedEpDownload = {};
-
-function downloadFile(url, fileName, onProgress) {
-  return new Promise(function(resolve, reject) {
-    fetch(url).then(function(response) {
-      if (!response.ok) { reject(new Error("HTTP " + response.status)); return; }
-      var contentLength = response.headers.get("Content-Length");
-      var totalBytes = contentLength ? parseInt(contentLength) : 0;
-      var reader = response.body.getReader();
-      var chunks = [];
-      var receivedBytes = 0;
-      function pump() {
-        return reader.read().then(function(result) {
-          if (result.done) {
-            var blob = new Blob(chunks);
-            var blobUrl = URL.createObjectURL(blob);
-            var a = document.createElement("a");
-            a.href = blobUrl;
-            a.download = fileName;
-            a.style.display = "none";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 30000);
-            resolve();
-            return;
-          }
-          chunks.push(result.value);
-          receivedBytes += result.value.length;
-          if (onProgress) {
-            var pct = totalBytes > 0 ? (receivedBytes / totalBytes * 100) : 0;
-            onProgress(pct, receivedBytes, totalBytes);
-          }
-          return pump();
-        });
-      }
-      return pump();
-    }).catch(reject);
-  });
-}
-
-function addToDownloadQueue(dlItem, fileName) {
-  var id = dlItem.itemId || ("dl_" + Date.now());
-  for (var i = 0; i < downloadQueue.length; i++) {
-    if (downloadQueue[i].id === id && downloadQueue[i].status !== "done" && downloadQueue[i].status !== "error") {
-      showToast("Already in download queue", "info");
-      return;
-    }
-  }
-  downloadQueue.push({
-    id: id, fileName: fileName,
-    type: dlItem.type || "direct",
-    directUrl: dlItem.directUrl || null,
-    seriesId: dlItem.seriesId || null,
-    season: dlItem.season || 0, episode: dlItem.episode || 0,
-    status: "queued", progress: 0, receivedBytes: 0, totalBytes: 0
-  });
-  updateDownloadBadge();
-  renderDownloadList();
-  showToast("Added to downloads: " + fileName, "success");
-}
-
-function getBestDownloadUrl(stream) {
-  // Priority: downloadUrl (stripped) > fallbackUrl (stripped) > url (stripped, if not HLS)
-  if (stream.downloadUrl) return stripDownloadParam(stream.downloadUrl);
-  if (stream.fallbackUrl) return stripDownloadParam(stream.fallbackUrl);
-  if (stream.url && stream.url.indexOf(".m3u8") === -1) return stripDownloadParam(stream.url);
-  if (stream.url) return stripDownloadParam(stream.url);
-  return null;
-}
-
-function processDownloadQueue() {
-  if (isProcessingQueue) return;
-  var nextItem = null;
-  for (var i = 0; i < downloadQueue.length; i++) {
-    if (downloadQueue[i].status === "queued") { nextItem = downloadQueue[i]; break; }
-  }
-  if (!nextItem) { isProcessingQueue = false; updateDownloadBadge(); return; }
-  isProcessingQueue = true;
-  nextItem.status = "downloading";
-  renderDownloadList();
-  updateDownloadBadge();
-
-  function doDownload(rawUrl) {
-    if (!rawUrl) {
-      nextItem.status = "error"; renderDownloadList(); isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue(); return;
-    }
-    var resolvedUrl = resolveStreamUrl(rawUrl);
-    console.log("[Download] Raw:", rawUrl.substring(0, 100));
-    console.log("[Download] Resolved:", resolvedUrl.substring(0, 100));
-    downloadFile(resolvedUrl, nextItem.fileName, function(pct, received, total) {
-      nextItem.progress = pct; nextItem.receivedBytes = received; nextItem.totalBytes = total;
-      renderDownloadList();
-    }).then(function() {
-      nextItem.status = "done"; renderDownloadList();
-      showToast(nextItem.fileName + " downloaded!", "success");
-      isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue();
-    }).catch(function(err) {
-      console.log("[Download] Error:", err.message);
-      nextItem.status = "error"; renderDownloadList();
-      showToast("Failed: " + nextItem.fileName, "error");
-      isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue();
-    });
-  }
-
-  if (nextItem.directUrl) {
-    doDownload(nextItem.directUrl);
-  } else if (nextItem.type === "episode" && nextItem.seriesId) {
-    showStatus("Fetching stream for " + nextItem.fileName + "...");
-    var streamApiUrl = PROXY_URL + encodeURIComponent(API_BASE + "/stream/series/" + nextItem.seriesId + ":" + nextItem.season + ":" + nextItem.episode + ".json");
-    fetchJson(streamApiUrl, 2).then(function(data) {
-      hideStatus();
-      var streams = data && data.streams ? data.streams : [];
-      if (!streams.length) { nextItem.status = "error"; renderDownloadList(); isProcessingQueue = false; processDownloadQueue(); return; }
-      doDownload(getBestDownloadUrl(streams[0]));
-    }).catch(function() {
-      hideStatus(); nextItem.status = "error"; renderDownloadList(); isProcessingQueue = false; processDownloadQueue();
-    });
-  } else {
-    nextItem.status = "error"; renderDownloadList(); isProcessingQueue = false; processDownloadQueue();
-  }
-}
-
-function updateDownloadBadge() {
-  var active = 0;
-  for (var i = 0; i < downloadQueue.length; i++) {
-    if (downloadQueue[i].status === "queued" || downloadQueue[i].status === "downloading") active++;
-  }
-  var fab = document.getElementById("downloadFab");
-  var badge = document.getElementById("downloadBadge");
-  if (active > 0 || downloadQueue.length > 0) {
-    fab.classList.add("show");
-    badge.style.display = "flex";
-    badge.textContent = active > 0 ? active : "";
-  } else { fab.classList.remove("show"); badge.style.display = "none"; }
-}
-
-function formatBytes(bytes) {
-  if (!bytes) return "";
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
-  if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + " MB";
-  return (bytes / 1073741824).toFixed(2) + " GB";
-}
-
-function renderDownloadList() {
-  var container = document.getElementById("downloadList");
-  if (!container) return;
-  if (!downloadQueue.length) { container.innerHTML = '<div class="empty-state"><p>No downloads yet</p></div>'; return; }
-  var html = "";
-  for (var i = downloadQueue.length - 1; i >= 0; i--) {
-    var item = downloadQueue[i];
-    var statusText = ""; var iconClass = item.status; var iconChar = "";
-    if (item.status === "queued") { statusText = "Waiting"; iconChar = "&#8987;"; }
-    else if (item.status === "downloading") { statusText = "Downloading " + (item.progress || 0).toFixed(1) + "%"; iconChar = "&#8595;"; }
-    else if (item.status === "done") { statusText = "Done"; iconChar = "&#10003;"; }
-    else { statusText = "Failed"; iconChar = "!"; }
-    html += '<div class="dl-item ' + item.status + '"><div class="dl-item-status-icon ' + iconClass + '">' + iconChar + '</div><div class="dl-item-info"><div class="dl-item-name">' + item.fileName + '</div><div class="dl-item-status"><span>' + statusText + '</span>' + (item.totalBytes > 0 ? '<span>' + formatBytes(item.receivedBytes) + ' / ' + formatBytes(item.totalBytes) + '</span>' : '') + '</div><div class="dl-progress-wrap"><div class="dl-progress-fill" style="width:' + (item.progress || 0) + '%"></div></div></div></div>';
-  }
-  container.innerHTML = html;
-}
-
-function toggleDownloadPanel() {
-  var panel = document.getElementById("downloadPanel");
-  panel.classList.toggle("show");
-  if (panel.classList.contains("show")) renderDownloadList();
-}
-
-function clearCompletedDownloads() {
-  downloadQueue = downloadQueue.filter(function(item) { return item.status !== "done" && item.status !== "error"; });
-  renderDownloadList(); updateDownloadBadge();
-}
-
-// ================================================================
-// EPISODE BATCH DOWNLOAD
-// ================================================================
-function toggleEpDownload(globalIdx) {
-  if (selectedEpDownload[globalIdx]) delete selectedEpDownload[globalIdx];
-  else selectedEpDownload[globalIdx] = true;
-  renderPlayerEpisodes();
-  updateBatchDownloadBar();
-}
-
-function selectAllEpisodes() {
-  var allSelected = true;
-  for (var i = 0; i < allEpisodes.length; i++) { if (!selectedEpDownload[i]) { allSelected = false; break; } }
-  if (allSelected) { selectedEpDownload = {}; }
-  else { for (var j = 0; j < allEpisodes.length; j++) selectedEpDownload[j] = true; }
-  renderPlayerEpisodes(); updateBatchDownloadBar();
-}
-
-function getSelectedCount() {
-  var count = 0;
-  for (var k in selectedEpDownload) { if (selectedEpDownload[k]) count++; }
-  return count;
-}
-
-function updateBatchDownloadBar() {
-  var btn = document.getElementById("batchDlBtn");
-  if (btn) { var c = getSelectedCount(); btn.textContent = c > 0 ? "Download Selected (" + c + ")" : "Download Selected"; }
-}
-
-function downloadSelectedEpisodes() {
-  var count = 0;
-  for (var i = 0; i < allEpisodes.length; i++) {
-    if (selectedEpDownload[i]) {
-      var ep = allEpisodes[i];
-      var fname = (currentDetail ? currentDetail.name : "Series") + " S" + String(ep.season).padStart(2, "0") + "E" + String(ep.number).padStart(2, "0") + ".mp4";
-      var directUrl = null;
-      if (i === currentEpisodeIndex && currentStreams.length > 0) {
-        directUrl = getBestDownloadUrl(currentStreams[currentSelectedStream] || currentStreams[0]);
-      }
-      addToDownloadQueue({ itemId: (currentDetail ? currentDetail.id : "") + ":" + ep.season + ":" + ep.number, type: "episode", seriesId: currentDetail ? currentDetail.id : "", season: ep.season, episode: ep.number, directUrl: directUrl }, fname);
-      count++;
-    }
-  }
-  if (count > 0) {
-    selectedEpDownload = {}; renderPlayerEpisodes(); updateBatchDownloadBar();
-    if (!document.getElementById("downloadPanel").classList.contains("show")) toggleDownloadPanel();
-    processDownloadQueue();
-    showToast("Queued " + count + " episodes for download", "success");
-  } else { showToast("Select episodes first", "info"); }
-}
-
-function downloadSingleEpisode(globalIdx) {
-  if (globalIdx < 0 || globalIdx >= allEpisodes.length) return;
-  var ep = allEpisodes[globalIdx];
-  var fname = (currentDetail ? currentDetail.name : "Series") + " S" + String(ep.season).padStart(2, "0") + "E" + String(ep.number).padStart(2, "0") + ".mp4";
-  var directUrl = null;
-  if (globalIdx === currentEpisodeIndex && currentStreams.length > 0) {
-    directUrl = getBestDownloadUrl(currentStreams[currentSelectedStream] || currentStreams[0]);
-  }
-  addToDownloadQueue({ itemId: (currentDetail ? currentDetail.id : "") + ":" + ep.season + ":" + ep.number, type: "episode", seriesId: currentDetail ? currentDetail.id : "", season: ep.season, episode: ep.number, directUrl: directUrl }, fname);
-  processDownloadQueue();
-}
-
-function downloadCurrent() {
-  if (!currentStreams || !currentStreams.length) { showToast("No stream to download", "error"); return; }
-  var stream = currentStreams[currentSelectedStream] || currentStreams[0];
-  var dlUrl = getBestDownloadUrl(stream);
-  if (!dlUrl) { showToast("No download URL", "error"); return; }
-  var fname = (currentDetail && currentDetail.name ? currentDetail.name : "video");
-  if (currentEpisodeIndex >= 0 && currentEpisodeIndex < allEpisodes.length) {
-    var ep = allEpisodes[currentEpisodeIndex];
-    fname += " S" + String(ep.season).padStart(2, "0") + "E" + String(ep.number).padStart(2, "0");
-  }
-  fname += ".mp4";
-  addToDownloadQueue({ itemId: currentDetail ? currentDetail.id + "_play" : "dl_" + Date.now(), type: "direct", directUrl: dlUrl }, fname);
-  processDownloadQueue();
-}
-
-// ================================================================
-// PIP
-// ================================================================
-function togglePiP() {
-  var v = document.getElementById("videoPlayer");
-  if (!v) return;
-  if (document.pictureInPictureElement) { document.exitPictureInPicture().catch(function(){}); return; }
-  if (v.requestPictureInPicture) v.requestPictureInPicture().catch(function() { showToast("PiP not available", "error"); });
-  else showToast("PiP not supported", "error");
-}
-
-// ================================================================
-// TRAILER
-// ================================================================
-function playTrailer() {
-  if (!currentDetail || !currentDetail.trailers || !currentDetail.trailers.length) { showToast("No trailer", "info"); return; }
-  var t = currentDetail.trailers[0];
-  var vid = "";
-  if (t.url) { var m = t.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/); if (m) vid = m[1]; }
-  else if (t.source) vid = t.source;
-  if (!vid) { showToast("Cannot parse trailer", "error"); return; }
-  document.getElementById("trailerIframe").src = "https://www.youtube.com/embed/" + vid + "?autoplay=1&rel=0";
-  document.getElementById("trailerModal").classList.add("active");
-}
-function closeTrailer() {
-  document.getElementById("trailerIframe").src = "";
-  document.getElementById("trailerModal").classList.remove("active");
-}
-
-// ================================================================
-// HERO CAROUSEL
-// ================================================================
-var heroSlides = [];
-var heroIndex = 0;
-var heroTimer = null;
-var heroTouchX = 0;
-
-function renderHeroCarousel(metas) {
-  heroSlides = metas;
-  heroIndex = 0;
-  var content = document.getElementById("homeContent");
-  var heroDiv = document.getElementById("heroSection");
-  if (!heroDiv) { heroDiv = document.createElement("div"); heroDiv.id = "heroSection"; content.insertBefore(heroDiv, content.firstChild); }
-  if (!metas.length) { heroDiv.innerHTML = ""; return; }
-  var slidesHtml = ""; var dotsHtml = "";
-  metas.forEach(function(meta, i) {
-    var bg = meta.background || meta.banner || meta.poster || "";
-    var name = meta.name || "";
-    var year = meta.releaseInfo || "";
-    var genres = meta.genres ? (Array.isArray(meta.genres) ? meta.genres.slice(0, 2).join(", ") : meta.genres) : "";
-    var vj = meta.vj || (meta.vjs && meta.vjs.length ? meta.vjs[0] : "");
-    var desc = meta.description || "";
-    var type = meta.type || "movie";
-    slidesHtml += '<div class="hero-slide' + (i === 0 ? ' active' : '') + '" onclick="openDetail(\'' + type + '\',\'' + meta.id + '\')"><img src="' + bg + '" alt="" onerror="this.src=\'' + (meta.poster || '') + '\'"><div class="hero-gradient"></div><div class="hero-glow-l"></div><div class="hero-glow-r"></div><div class="hero-content"><div class="hero-badge">Trending Now</div><div class="hero-title">' + name + '</div><div class="hero-meta">' + (year ? '<span>' + year + '</span><div class="dot"></div>' : '') + (genres ? '<span>' + genres + '</span>' : '') + (vj ? '<div class="dot"></div><span>' + vj + '</span>' : '') + '</div>' + (desc ? '<div class="hero-desc">' + desc + '</div>' : '') + '<div class="hero-actions"><button class="btn-primary" onclick="event.stopPropagation();openDetail(\'' + type + '\',\'' + meta.id + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> Watch Now</button><button class="btn-secondary" onclick="event.stopPropagation();openDetail(\'' + type + '\',\'' + meta.id + '\')">More Info</button></div></div></div>';
-    dotsHtml += '<div class="hero-dot' + (i === 0 ? ' active' : '') + '" onclick="goHeroSlide(' + i + ')"></div>';
-  });
-  heroDiv.innerHTML = '<div class="hero-carousel" ontouchstart="heroTouchStart(event)" ontouchend="heroTouchEnd(event)"><div class="hero-slides">' + slidesHtml + '</div><div class="hero-dots">' + dotsHtml + '</div></div>';
-  startHeroAuto();
-}
-
-function goHeroSlide(idx) {
-  if (idx === heroIndex) return;
-  var slides = document.querySelectorAll(".hero-slide");
-  var dots = document.querySelectorAll(".hero-dot");
-  if (slides[heroIndex]) slides[heroIndex].classList.remove("active");
-  if (dots[heroIndex]) dots[heroIndex].classList.remove("active");
-  heroIndex = idx;
-  if (slides[heroIndex]) slides[heroIndex].classList.add("active");
-  if (dots[heroIndex]) dots[heroIndex].classList.add("active");
-  startHeroAuto();
-}
-function nextHeroSlide() { if (heroSlides.length < 2) return; goHeroSlide((heroIndex + 1) % heroSlides.length); }
-function prevHeroSlide() { if (heroSlides.length < 2) return; goHeroSlide((heroIndex - 1 + heroSlides.length) % heroSlides.length); }
-function startHeroAuto() { if (heroTimer) clearInterval(heroTimer); if (heroSlides.length < 2) return; heroTimer = setInterval(nextHeroSlide, 5500); }
-function heroTouchStart(e) { heroTouchX = e.touches[0].clientX; if (heroTimer) clearInterval(heroTimer); }
-function heroTouchEnd(e) { var diff = heroTouchX - e.changedTouches[0].clientX; if (Math.abs(diff) > 50) { if (diff > 0) nextHeroSlide(); else prevHeroSlide(); } startHeroAuto(); }
-
-// ================================================================
-// INFINITE SCROLL GRID
-// ================================================================
-function initInfiniteGrid(items) {
-  gridPool = items; gridIndex = 0;
-  var container = document.getElementById("infiniteGrid");
-  if (!container) return;
-  container.innerHTML = "";
-  loadMoreGrid();
-  var sentinel = document.getElementById("gridSentinel");
-  if (gridObserver) gridObserver.disconnect();
-  gridObserver = new IntersectionObserver(function(entries) {
-    if (entries[0].isIntersecting) loadMoreGrid();
-  }, { rootMargin: "400px" });
-  if (sentinel) gridObserver.observe(sentinel);
-}
-
-function loadMoreGrid() {
-  var container = document.getElementById("infiniteGrid");
-  var sentinel = document.getElementById("gridSentinel");
-  if (!container) return;
-  var batch = gridPool.slice(gridIndex, gridIndex + GRID_BATCH);
-  batch.forEach(function(meta) { container.appendChild(createPosterCard(meta)); });
-  gridIndex += batch.length;
-  if (sentinel) {
-    sentinel.innerHTML = gridIndex >= gridPool.length
-      ? '<div style="color:var(--text-3);font-size:13px;padding:12px">' + (gridPool.length > 0 ? "All " + gridPool.length + " titles shown" : "No more titles") + '</div>'
-      : '<div class="spinner"></div>';
-  }
-}
-
-// ================================================================
-// FUZZY SEARCH
-// ================================================================
-function normalizeString(s) {
-  return String(s || "").toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
-}
-
-function levenshtein(a, b) {
-  if (a.length === 0) return b.length;
-  if (b.length === 0) return a.length;
-  var matrix = [];
-  for (var i = 0; i <= b.length; i++) matrix[i] = [i];
-  for (var j = 0; j <= a.length; j++) matrix[0][j] = j;
-  for (var i2 = 1; i2 <= b.length; i2++) {
-    for (var j2 = 1; j2 <= a.length; j2++) {
-      if (b.charAt(i2 - 1) === a.charAt(j2 - 1)) matrix[i2][j2] = matrix[i2 - 1][j2 - 1];
-      else matrix[i2][j2] = Math.min(matrix[i2 - 1][j2 - 1] + 1, matrix[i2][j2 - 1] + 1, matrix[i2 - 1][j2] + 1);
-    }
-  }
-  return matrix[b.length][a.length];
-}
-
-function fuzzyScore(query, target) {
-  if (!query || !target) return 0;
-  var nq = normalizeString(query);
-  var nt = normalizeString(target);
-  if (!nq || !nt) return 0;
-  if (nt === nq) return 100;
-  if (nt.indexOf(nq) !== -1) return 85;
-  if (nq.indexOf(nt) !== -1) return 75;
-
-  var qWords = nq.split(" ").filter(Boolean);
-  var tWords = nt.split(" ").filter(Boolean);
-  if (!qWords.length || !tWords.length) return 0;
-
-  var matchCount = 0;
-  for (var i = 0; i < qWords.length; i++) {
-    var qw = qWords[i];
-    var bestMatch = 0;
-    for (var j = 0; j < tWords.length; j++) {
-      var tw = tWords[j];
-      if (tw.indexOf(qw) !== -1 || qw.indexOf(tw) !== -1) { bestMatch = 1; break; }
-      if (qw.length >= 3 && tw.length >= 3) {
-        var dist = levenshtein(qw, tw);
-        var maxLen = Math.max(qw.length, tw.length);
-        var sim = 1 - (dist / maxLen);
-        if (sim > bestMatch && sim > 0.6) bestMatch = sim;
-      }
-    }
-    matchCount += bestMatch;
-  }
-  var wordScore = (matchCount / qWords.length) * 70;
-
-  var dist2 = levenshtein(nq, nt);
-  var maxLen2 = Math.max(nq.length, nt.length);
-  var stringScore = maxLen2 > 0 ? (1 - (dist2 / maxLen2)) * 50 : 0;
-
-  return Math.max(wordScore, stringScore);
-}
-
-function fuzzySearch(items, query, limit) {
-  var results = [];
-  items.forEach(function(item) {
-    if (!item.name) return;
-    var score = fuzzyScore(query, item.name);
-    if (score > 25) results.push({ item: item, score: score });
-  });
-  results.sort(function(a, b) { return b.score - a.score; });
-  return results.slice(0, limit || 10).map(function(r) { return r.item; });
-}
-
-// ================================================================
-// SEARCH
-// ================================================================
-function toggleSearch() {
-  var bar = document.getElementById("searchBar");
-  bar.classList.toggle("active");
-  if (bar.classList.contains("active")) document.getElementById("searchInput").focus();
-  else { document.getElementById("searchInput").value = ""; hideSuggestions(); if (currentCategoryFilter === "all") loadHome(); else selectCategory(currentCategoryFilter); }
-}
-function hideSuggestions() { document.getElementById("searchSuggestions").className = ""; }
-
-function onSearchInput(query) {
-  if (searchTimeout) clearTimeout(searchTimeout);
-  if (!query || query.length < 2) { hideSuggestions(); return; }
-  searchTimeout = setTimeout(function() {
-    var matches = fuzzySearch(globalAllItems, query, 8);
-    if (matches.length > 0) {
-      renderSuggestions(matches, query);
-    } else {
-      // Search API for suggestions when local has no matches
-      var movieUrl = PROXY_URL + encodeURIComponent(API_BASE + "/catalog/movie/moviebay-all-movies/search=" + encodeURIComponent(query) + ".json");
-      var seriesUrl = PROXY_URL + encodeURIComponent(API_BASE + "/catalog/series/moviebay-all-series/search=" + encodeURIComponent(query) + ".json");
-      Promise.all([
-        fetchJson(movieUrl, 1).catch(function() { return { metas: [] }; }),
-        fetchJson(seriesUrl, 1).catch(function() { return { metas: [] }; })
-      ]).then(function(results) {
-        var items = [];
-        results.forEach(function(r) { if (r && r.metas) items = items.concat(r.metas); });
-        if (items.length > 0) {
-          renderSuggestions(fuzzySearch(items, query, 8), query);
-        } else {
-          renderSuggestions([], query);
-        }
-      });
-    }
-  }, 150);
-}
-
-function renderSuggestions(matches, query) {
-  var container = document.getElementById("searchSuggestions");
-  if (!matches.length) {
-    container.innerHTML = '<div class="suggestion-item"><div class="suggestion-name" style="color:var(--text-3)">Searching...</div></div>';
-    container.className = "show";
-    return;
-  }
-  var html = "";
-  var nq = normalizeString(query);
-  matches.forEach(function(item) {
-    var name = item.name || "";
-    var nt = normalizeString(name);
-    var highlighted = name;
-    if (nt.indexOf(nq) !== -1) {
-      var idx = name.toLowerCase().indexOf(query.toLowerCase());
-      if (idx >= 0) highlighted = name.substring(0, idx) + "<mark>" + name.substring(idx, idx + query.length) + "</mark>" + name.substring(idx + query.length);
-    } else {
-      highlighted = name + ' <span class="suggestion-fuzzy">~match</span>';
-    }
-    html += '<div class="suggestion-item" onclick="hideSuggestions();openDetail(\'' + (item.type || "movie") + '\',\'' + item.id + '\')"><div class="suggestion-name">' + highlighted + '</div><div class="suggestion-meta">' + (item.releaseInfo || "") + '</div></div>';
-  });
-  html += '<div class="suggestion-all" onclick="onSearchSubmit(\'' + query.replace(/'/g, "\\'") + '\')">View all results for "' + query + '"</div>';
-  container.innerHTML = html;
-  container.className = "show";
-}
-
-function onSearchSubmit(query) {
-  if (!query || query.length < 2) return;
-  hideSuggestions();
-  showStatus("Searching...");
-  var localResults = fuzzySearch(globalAllItems, query, 50);
-  var movieUrl = PROXY_URL + encodeURIComponent(API_BASE + "/catalog/movie/moviebay-all-movies/search=" + encodeURIComponent(query) + ".json");
-  var seriesUrl = PROXY_URL + encodeURIComponent(API_BASE + "/catalog/series/moviebay-all-series/search=" + encodeURIComponent(query) + ".json");
-  Promise.all([
-    fetchJson(movieUrl, 1).catch(function() { return { metas: [] }; }),
-    fetchJson(seriesUrl, 1).catch(function() { return { metas: [] }; })
-  ]).then(function(results) {
-    hideStatus();
-    var allResults = localResults.slice();
-    var resultIds = {};
-    allResults.forEach(function(m) { resultIds[m.id] = true; });
-    results.forEach(function(r) {
-      if (r && r.metas) r.metas.forEach(function(m) {
-        if (!resultIds[m.id]) { resultIds[m.id] = true; allResults.push(m); }
-      });
-    });
-    // If still no results, try fuzzy on everything
-    if (!allResults.length) {
-      allResults = fuzzySearch(globalAllItems, query, 20);
-    }
-    renderSearchResults(allResults, query);
-  }).catch(function() {
-    hideStatus();
-    renderSearchResults(localResults, query);
-  });
-}
-
-function renderSearchResults(metas, query) {
-  var content = document.getElementById("homeContent");
-  content.innerHTML = "";
-  if (!metas.length) {
-    content.innerHTML = '<div class="empty-state animate-up"><div class="empty-icon">&#128269;</div><h3>No results for "' + query + '"</h3><p>Try different words or check spelling</p></div>';
-    return;
-  }
-  var section = document.createElement("div");
-  section.className = "section animate-up";
-  section.innerHTML = '<div class="section-header"><div class="section-title">Results for "' + query + '" (' + metas.length + ')</div></div>';
-  var grid = document.createElement("div");
-  grid.className = "poster-grid";
-  metas.forEach(function(meta) { grid.appendChild(createPosterCard(meta)); });
-  section.appendChild(grid);
-  content.appendChild(section);
-}
-
-// ================================================================
-// CATEGORY TABS (GENRE + TYPE)
-// ================================================================
-function renderCategoryTabs() {
-  var container = document.getElementById("categoryTabs");
-  container.innerHTML = "";
-  CATEGORY_TABS.forEach(function(cat) {
-    if (cat.id.indexOf("sep") === 0) {
-      var sep = document.createElement("div");
-      sep.className = "cat-tab-sep";
-      container.appendChild(sep);
-      return;
-    }
-    var btn = document.createElement("button");
-    btn.className = "cat-tab" + (cat.id === currentCategoryFilter ? " active" : "");
-    btn.textContent = cat.name;
-    btn.onclick = function() { selectCategory(cat.id); };
-    container.appendChild(btn);
-  });
-}
-
-function selectCategory(catId) {
-  currentCategoryFilter = catId;
-  renderCategoryTabs();
-
-  if (catId === "all") {
-    resetDedup();
-    loadHome();
-    return;
-  }
-
-  var cat = null;
-  for (var i = 0; i < CATEGORY_TABS.length; i++) { if (CATEGORY_TABS[i].id === catId) { cat = CATEGORY_TABS[i]; break; } }
-  if (!cat) return;
-
-  var content = document.getElementById("homeContent");
-  content.innerHTML = '<div class="load-sentinel"><div class="spinner"></div></div>';
-
-  if (cat.typeFilter) {
-    loadTypeFiltered(cat);
-  } else {
-    loadGenreFiltered(cat);
-  }
-}
-
-function loadTypeFiltered(cat) {
-  var content = document.getElementById("homeContent");
-  var type = cat.typeFilter;
-
-  // Filter loaded items
-  var localItems = globalAllItems.filter(function(item) {
-    return (item.type || "movie") === type;
-  });
-
-  // Also fetch from API
-  var catalogId = type === "movie" ? "moviebay-all-movies" : "moviebay-all-series";
-  var url = PROXY_URL + encodeURIComponent(API_BASE + "/catalog/" + type + "/" + catalogId + ".json");
-  fetchJson(url).then(function(data) {
-    var metas = data && data.metas ? data.metas : [];
-    metas.forEach(function(m) { if (!m.type) m.type = type; });
-    addToGlobalPool(metas);
-    var seenIds = {};
-    var merged = [];
-    localItems.forEach(function(item) { if (!seenIds[item.id]) { seenIds[item.id] = true; merged.push(item); } });
-    metas.forEach(function(m) { if (!seenIds[m.id]) { seenIds[m.id] = true; merged.push(m); } });
-    renderFilteredGrid(merged, cat.name);
-  }).catch(function() {
-    renderFilteredGrid(localItems, cat.name);
-  });
-}
-
-function loadGenreFiltered(cat) {
-  // Filter local items
-  var localItems = globalAllItems.filter(function(item) {
-    return itemMatchesCategory(item, cat);
-  });
-
-  // Search API for more content
-  var searchTerms = cat.searchTerms || cat.genres || [cat.name.toLowerCase()];
-  var allSearchPromises = [];
-  searchTerms.forEach(function(term) {
-    allSearchPromises.push(fetchJson(PROXY_URL + encodeURIComponent(API_BASE + "/catalog/movie/moviebay-all-movies/search=" + encodeURIComponent(term) + ".json"), 1).catch(function() { return { metas: [] }; }));
-    allSearchPromises.push(fetchJson(PROXY_URL + encodeURIComponent(API_BASE + "/catalog/series/moviebay-all-series/search=" + encodeURIComponent(term) + ".json"), 1).catch(function() { return { metas: [] }; }));
-  });
-
-  Promise.all(allSearchPromises).then(function(results) {
-    var seenIds = {};
-    var merged = [];
-    localItems.forEach(function(item) { if (!seenIds[item.id]) { seenIds[item.id] = true; merged.push(item); } });
-    results.forEach(function(r) {
-      if (r && r.metas) r.metas.forEach(function(m) {
-        if (!seenIds[m.id]) {
-          seenIds[m.id] = true;
-          if (!m.type) m.type = "movie";
-          merged.push(m);
-        }
-      });
-    });
-    renderFilteredGrid(merged, cat.name);
-  }).catch(function() {
-    renderFilteredGrid(localItems, cat.name);
-  });
-}
-
-function getItemGenres(item) {
-  if (!item.genres) return [];
-  if (Array.isArray(item.genres)) return item.genres.map(function(g) { return String(g).toLowerCase().trim(); });
-  return String(item.genres).toLowerCase().split(/[,/]/).map(function(g) { return g.trim(); }).filter(Boolean);
-}
-
-function itemMatchesCategory(item, cat) {
-  if (cat.typeFilter && (item.type || "movie") !== cat.typeFilter) return false;
-  if (!cat.genres && !cat.keywords) return true;
-
-  var genreMatch = false;
-  if (cat.genres && cat.genres.length > 0) {
-    var itemGenres = getItemGenres(item);
-    for (var i = 0; i < cat.genres.length; i++) {
-      for (var j = 0; j < itemGenres.length; j++) {
-        if (itemGenres[j].indexOf(cat.genres[i]) !== -1 || cat.genres[i].indexOf(itemGenres[j]) !== -1) { genreMatch = true; break; }
-      }
-      if (genreMatch) break;
-    }
-  }
-
-  var keywordMatch = false;
-  if (cat.keywords && cat.keywords.length > 0) {
-    var searchText = ((item.name || "") + " " + (item.description || "")).toLowerCase();
-    for (var k = 0; k < cat.keywords.length; k++) {
-      if (searchText.indexOf(cat.keywords[k]) !== -1) { keywordMatch = true; break; }
-    }
-  }
-
-  if (cat.genres && cat.keywords) return genreMatch || keywordMatch;
-  if (cat.genres) return genreMatch;
-  if (cat.keywords) return keywordMatch;
-  return true;
-}
-
-function renderFilteredGrid(items, title) {
-  var content = document.getElementById("homeContent");
-  content.innerHTML = "";
-  if (!items.length) {
-    content.innerHTML = '<div class="empty-state"><div class="empty-icon">&#127909;</div><h3>No content found</h3><p>Try another category</p></div>';
-    return;
-  }
-  var section = document.createElement("div");
-  section.className = "section animate-up";
-  section.innerHTML = '<div class="section-header"><div class="section-title">' + title + ' (' + items.length + ')</div></div>';
-  var grid = document.createElement("div");
-  grid.className = "poster-grid";
-  items.forEach(function(meta) { grid.appendChild(createPosterCard(meta)); });
-  section.appendChild(grid);
-  content.appendChild(section);
-}
-
-// ================================================================
-// HOME LOADING
-// ================================================================
-function loadHome() {
-  resetDedup();
-  var content = document.getElementById("homeContent");
-  content.innerHTML = "";
-  var heroDiv = document.createElement("div");
-  heroDiv.id = "heroSection";
-  heroDiv.innerHTML = '<div class="skeleton skeleton-hero"></div>';
-  content.appendChild(heroDiv);
-  renderContinueSection();
-  renderWatchlistSection();
-
-  var CATALOGS = [
-    { id: "moviebay-trending-movies", name: "Trending Movies", type: "movie" },
-    { id: "moviebay-latest-movies", name: "Latest Releases", type: "movie" },
-    { id: "moviebay-popular-movies", name: "Popular Movies", type: "movie" },
-    { id: "moviebay-vj-movies", name: "VJ Movies", type: "movie" },
-    { id: "moviebay-trending-series", name: "Trending Series", type: "series" },
-    { id: "moviebay-latest-series", name: "Latest Series", type: "series" },
-    { id: "moviebay-popular-series", name: "Popular Series", type: "series" },
-    { id: "moviebay-vj-series", name: "VJ Series", type: "series" }
-  ];
-
-  CATALOGS.forEach(function(cat) {
-    var section = document.createElement("div");
-    section.id = "row_" + cat.id;
-    section.className = "section";
-    section.innerHTML = '<div class="section-header"><div class="section-title">' + cat.name + '</div></div><div class="skeleton-row"><div class="skeleton skeleton-poster"></div><div class="skeleton skeleton-poster"></div><div class="skeleton skeleton-poster"></div><div class="skeleton skeleton-poster"></div></div>';
-    content.appendChild(section);
-  });
-
-  var gridSection = document.createElement("div");
-  gridSection.id = "gridSection";
-  gridSection.className = "section";
-  gridSection.innerHTML = '<div class="section-header"><div class="section-title">Explore More</div></div><div class="poster-grid" id="infiniteGrid"></div><div class="load-sentinel" id="gridSentinel"><div class="spinner"></div></div>';
-  content.appendChild(gridSection);
-
-  // Load hero from first catalog
-  var trendUrl = PROXY_URL + encodeURIComponent(API_BASE + "/catalog/movie/moviebay-trending-movies.json");
-  fetchJson(trendUrl).then(function(data) {
-    var metas = data && data.metas ? data.metas : [];
-    if (metas.length > 0) {
-      metas.slice(0, 6).forEach(function(m) { markSeen(m.id); });
-      addToGlobalPool(metas);
-      renderHeroCarousel(metas.slice(0, 6));
-    }
-  }).catch(function() { var hs = document.getElementById("heroSection"); if (hs) hs.innerHTML = ""; });
-
-  var allMetas = []; var loaded = 0;
-  CATALOGS.forEach(function(cat) {
-    var apiUrl = PROXY_URL + encodeURIComponent(API_BASE + "/catalog/" + cat.type + "/" + cat.id + ".json");
-    fetchJson(apiUrl).then(function(data) {
-      var metas = data && data.metas ? data.metas : [];
-      allMetas = allMetas.concat(metas);
-      addToGlobalPool(metas);
-      renderCatalogRow(cat, metas, 12);
-    }).catch(function(err) { renderRowError(cat, err.message); }).finally(function() {
-      loaded++;
-      if (loaded === CATALOGS.length) {
-        var remaining = [];
-        allMetas.forEach(function(m) { if (!isSeen(m.id)) { markSeen(m.id); remaining.push(m); } });
-        initInfiniteGrid(remaining);
-      }
-    });
-  });
-}
-
-function renderCatalogRow(cat, metas, limit) {
-  var section = document.getElementById("row_" + cat.id);
-  if (!section) return;
-  var uniqueMetas = [];
-  for (var i = 0; i < metas.length && uniqueMetas.length < limit; i++) {
-    if (!isSeen(metas[i].id)) { markSeen(metas[i].id); uniqueMetas.push(metas[i]); }
-  }
-  if (uniqueMetas.length === 0) { section.innerHTML = '<div class="section-header"><div class="section-title">' + cat.name + '</div></div>'; return; }
-  section.innerHTML = ""; section.className = "section animate-up";
-  var header = document.createElement("div");
-  header.className = "section-header";
-  header.innerHTML = '<div class="section-title">' + cat.name + '</div>';
-  section.appendChild(header);
-  var scroll = document.createElement("div");
-  scroll.className = "poster-scroll";
-  uniqueMetas.forEach(function(meta) { scroll.appendChild(createPosterCard(meta)); });
-  section.appendChild(scroll);
-}
-
-function renderRowError(cat, errMsg) {
-  var section = document.getElementById("row_" + cat.id);
-  if (!section) return;
-  section.innerHTML = '<div class="section-header"><div class="section-title">' + cat.name + '</div></div><div class="error-state"><div class="error-icon">&#9888;</div><p>' + (errMsg || "Failed") + '</p><button class="retry-btn" onclick="loadHome()">Retry</button></div>';
-}
-
-function renderContinueSection() {
-  var saved = getContinue();
-  if (!saved.length) return;
-  var content = document.getElementById("homeContent");
-  var section = document.createElement("div");
-  section.className = "section";
-  section.innerHTML = '<div class="section-header"><div class="section-title">Continue Watching</div></div>';
-  var scroll = document.createElement("div");
-  scroll.className = "poster-scroll";
-  saved.forEach(function(item) {
-    var card = document.createElement("div");
-    card.className = "continue-card";
-    card.onclick = function() { currentEpisodeIndex = item.episodeIndex || -1; openDetail(item.type, item.id); };
-    var pct = item.duration > 0 ? (item.currentTime / item.duration * 100) : 0;
-    card.innerHTML = '<div class="continue-img-wrap"><img src="' + item.poster + '" alt="" onerror="this.src=\'\'"><div class="continue-progress" style="width:' + pct + '%"></div><div class="continue-play-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="#000"><polygon points="5,3 19,12 5,21"/></svg></div><button class="continue-remove" onclick="removeContinue(\'' + item.id + '\', event)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div><div class="continue-info"><div class="continue-name">' + item.name + '</div><div class="continue-ep">' + (item.episodeInfo || "Resume") + '</div></div>';
-    scroll.appendChild(card);
-  });
-  section.appendChild(scroll);
-  content.appendChild(section);
-}
-
-function renderWatchlistSection() {
-  var list = getWatchlist();
-  if (!list.length) return;
-  var content = document.getElementById("homeContent");
-  var section = document.createElement("div");
-  section.className = "section";
-  section.innerHTML = '<div class="section-header"><div class="section-title">My List</div></div>';
-  var scroll = document.createElement("div");
-  scroll.className = "poster-scroll";
-  list.forEach(function(meta) { scroll.appendChild(createPosterCard(meta)); });
-  section.appendChild(scroll);
-  content.appendChild(section);
-}
-
-// ================================================================
-// POSTER CARD
-// ================================================================
-function createPosterCard(meta) {
-  var card = document.createElement("div");
-  card.className = "poster-card";
-  var type = meta.type || "movie";
-  card.onclick = function() { openDetail(type, meta.id); };
-  var imgWrap = document.createElement("div");
-  imgWrap.className = "poster-img-wrap";
-  var img = document.createElement("img");
-  img.src = meta.poster || "";
-  img.alt = meta.name || "";
-  img.loading = "lazy";
-  img.onerror = function() { this.src = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="300" fill="#111"><rect width="200" height="300"/><text x="100" y="155" fill="#333" text-anchor="middle" font-size="14">No Image</text></svg>'); };
-  imgWrap.appendChild(img);
-  var vjName = meta.vj || (meta.vjs && meta.vjs.length ? meta.vjs[0] : "");
-  if (vjName) { var badge = document.createElement("div"); badge.className = "poster-badge"; badge.textContent = vjName; imgWrap.appendChild(badge); }
-  if (meta.releaseInfo && parseInt(meta.releaseInfo) >= 2025) { var quality = document.createElement("div"); quality.className = "poster-quality"; quality.textContent = "NEW"; imgWrap.appendChild(quality); }
-  card.appendChild(imgWrap);
-  var name = document.createElement("div"); name.className = "poster-name"; name.textContent = meta.name || "Unknown"; card.appendChild(name);
-  var sub = document.createElement("div"); sub.className = "poster-sub";
-  var parts = []; if (meta.releaseInfo) parts.push(meta.releaseInfo); if (vjName) parts.push(vjName);
-  sub.textContent = parts.join(" | ");
-  card.appendChild(sub);
-  return card;
-}
-
-// ================================================================
-// DETAIL PAGE
-// ================================================================
-function openDetail(type, id) {
-  showStatus("Loading details...");
-  document.getElementById("loadingOverlay").classList.remove("hidden");
-  var metaUrl = PROXY_URL + encodeURIComponent(API_BASE + "/meta/" + type + "/" + id + ".json");
-  fetchJson(metaUrl).then(function(data) {
-    hideStatus();
-    document.getElementById("loadingOverlay").classList.add("hidden");
-    if (!data || !data.meta) { showToast("Details not found", "error"); return; }
-    currentDetail = data.meta;
-    currentDetail.type = type;
-    currentDetail.id = id;
-    renderDetail(data.meta);
-  }).catch(function(err) {
-    hideStatus();
-    document.getElementById("loadingOverlay").classList.add("hidden");
-    showToast("Failed to load: " + err.message, "error");
-  });
-}
-
-function renderDetail(meta) {
-  var bg = meta.background || meta.banner || meta.poster || "";
-  var bgImg = document.getElementById("detailBg");
-  bgImg.src = bg;
-  bgImg.onerror = function() { this.src = meta.poster || ""; };
-  var logo = document.getElementById("detailLogo");
-  var titleText = document.getElementById("detailTitleText");
-  if (meta.logo) { logo.src = meta.logo; logo.style.display = ""; titleText.style.display = "none"; }
-  else { logo.style.display = "none"; titleText.textContent = meta.name || "Unknown"; titleText.style.display = ""; }
-  var metaRow = document.getElementById("detailMetaRow");
-  metaRow.innerHTML = "";
-  if (meta.releaseInfo) metaRow.innerHTML += '<div class="detail-meta-item">' + meta.releaseInfo + '</div>';
-  if (meta.runtime) metaRow.innerHTML += '<div class="detail-meta-item">' + meta.runtime + '</div>';
-  if (meta.certification) metaRow.innerHTML += '<div class="detail-badge">' + meta.certification + '</div>';
-  if (meta.imdbRating) metaRow.innerHTML += '<div class="detail-imdb">IMDb ' + meta.imdbRating + '</div>';
-  var tagsDiv = document.getElementById("detailTags");
-  tagsDiv.innerHTML = "";
-  var genres = meta.genres ? (Array.isArray(meta.genres) ? meta.genres : [meta.genres]) : [];
-  genres.forEach(function(g) { tagsDiv.innerHTML += '<div class="detail-tag">' + g + '</div>'; });
-  if (meta.vj) tagsDiv.innerHTML += '<div class="detail-tag vj-tag">VJ: ' + meta.vj + '</div>';
-  if (meta.isDubbed) tagsDiv.innerHTML += '<div class="detail-tag vj-tag">Dubbed</div>';
-  document.getElementById("detailDesc").textContent = meta.description || "";
-  var wlBtn = document.getElementById("detailWatchlistBtn");
-  if (isWatchlisted(meta.id)) { wlBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="var(--error)" stroke="var(--error)" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>'; wlBtn.classList.add("watchlist-active"); }
-  else { wlBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>'; wlBtn.classList.remove("watchlist-active"); }
-  var trailerBtn = document.getElementById("trailerBtn");
-  trailerBtn.style.display = (meta.trailers && meta.trailers.length) ? "" : "none";
-  document.getElementById("detailPlayBtn").style.display = "";
-  document.getElementById("detailPlayBtn").innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> Play Now';
-  loadStreams(meta.id, meta.type);
-  if (meta.type === "series" && meta.videos && meta.videos.length > 0) initEpisodes(meta.videos);
-  else { document.getElementById("episodeSection").innerHTML = ""; allEpisodes = []; currentEpisodeIndex = -1; }
-  showPage("detailPage");
-}
-
-function loadStreams(id, type) {
-  var streamUrl = PROXY_URL + encodeURIComponent(API_BASE + "/stream/" + type + "/" + id + ".json");
-  var container = document.getElementById("streamSelector");
-  container.innerHTML = '<div class="sub-section-title">Streams</div><div class="skeleton" style="height:60px;margin-bottom:8px"></div><div class="skeleton" style="height:60px"></div>';
-  fetchJson(streamUrl).then(function(data) {
-    currentStreams = data && data.streams ? data.streams : [];
-    currentSelectedStream = 0;
-    renderStreamSelector();
-  }).catch(function(err) {
-    container.innerHTML = '<div class="error-state"><p>Failed to load streams: ' + err.message + '</p><button class="retry-btn" onclick="loadStreams(\'' + id + '\',\'' + type + '\')">Retry</button></div>';
-  });
-}
-
-function renderStreamSelector() {
-  var container = document.getElementById("streamSelector");
-  if (!currentStreams || currentStreams.length === 0) {
-    container.innerHTML = '<div class="empty-state"><p>No streams available</p></div>';
-    document.getElementById("detailPlayBtn").style.display = "none";
-    return;
-  }
-  if (currentStreams.length === 1) { container.innerHTML = ""; return; }
-  var html = '<div class="sub-section-title">Choose Stream</div>';
-  currentStreams.forEach(function(s, idx) {
-    html += '<div class="stream-option' + (idx === currentSelectedStream ? ' active' : '') + '" onclick="selectStream(' + idx + ')"><div class="stream-icon-wrap">' + (s.isFast ? '&#9889;' : '&#127909;') + '</div><div class="stream-info"><div class="stream-name">' + (s.vj || s.sourceName || "Stream " + (idx + 1)) + '</div><div class="stream-sub">' + (s.subtitle || s.server || "") + '</div></div><div class="stream-speed ' + (s.isFast ? "fast" : "normal") + '">' + (s.isFast ? "Fast" : "Normal") + '</div></div>';
-  });
-  container.innerHTML = html;
-}
-function selectStream(idx) { currentSelectedStream = idx; renderStreamSelector(); }
-
-// ================================================================
-// EPISODES (DETAIL PAGE)
-// ================================================================
-function initEpisodes(videos) {
-  allEpisodes = (videos || []).map(function(ep, i) {
-    return { id: ep.id || "", season: parseInt(ep.season) || 1, number: parseInt(ep.number) || (i + 1), name: ep.name || ("Episode " + (parseInt(ep.number) || (i + 1))), released: ep.released || "", duration: ep.duration || "" };
-  });
-  allEpisodes.sort(function(a, b) { if (a.season !== b.season) return a.season - b.season; return a.number - b.number; });
-  var seasons = {};
-  allEpisodes.forEach(function(ep) { if (!seasons[ep.season]) seasons[ep.season] = []; seasons[ep.season].push(ep); });
-  var seasonNums = Object.keys(seasons).map(Number).sort(function(a, b) { return a - b; });
-  currentSeason = seasonNums[0] || 1;
-  var container = document.getElementById("episodeSection");
-  if (!allEpisodes.length) { container.innerHTML = ""; return; }
-  var html = '<div class="sub-section-title">Episodes</div>';
-  if (seasonNums.length > 1) {
-    html += '<div class="season-tabs">';
-    seasonNums.forEach(function(s) { html += '<button class="season-tab' + (s === currentSeason ? ' active' : '') + '" data-season="' + s + '" onclick="selectSeason(' + s + ', this)">Season ' + s + '</button>'; });
-    html += '</div>';
-  }
-  html += '<div id="episodeItems"></div>';
-  container.innerHTML = html;
-  renderEpisodeItems(seasons[currentSeason] || allEpisodes);
-}
-
-function selectSeason(seasonNum, btn) {
-  seasonNum = parseInt(seasonNum);
-  currentSeason = seasonNum;
-  var tabs = document.querySelectorAll(".season-tab");
-  for (var i = 0; i < tabs.length; i++) {
-    tabs[i].classList.remove("active");
-    if (parseInt(tabs[i].getAttribute("data-season")) === seasonNum) tabs[i].classList.add("active");
-  }
-  renderEpisodeItems(allEpisodes.filter(function(ep) { return ep.season === seasonNum; }));
-}
-
-function renderEpisodeItems(episodes) {
-  var container = document.getElementById("episodeItems");
-  if (!container) return;
-  container.innerHTML = "";
-  episodes.forEach(function(ep) {
-    var globalIdx = -1;
-    for (var i = 0; i < allEpisodes.length; i++) {
-      if (allEpisodes[i].season === ep.season && allEpisodes[i].number === ep.number) { globalIdx = i; break; }
-    }
-    var item = document.createElement("div");
-    item.className = "episode-item" + (globalIdx === currentEpisodeIndex ? " playing" : "");
-    item.setAttribute("data-idx", globalIdx);
-    item.innerHTML = '<div class="ep-num">' + ep.number + '</div><div class="ep-info"><div class="ep-name">' + ep.name + '</div><div class="ep-date">' + ep.released + (ep.duration ? " | " + ep.duration : "") + '</div></div><div class="ep-play-icon">' + (globalIdx === currentEpisodeIndex ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>' : '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>') + '</div>';
-    item.onclick = function() {
-      var idx = parseInt(this.getAttribute("data-idx"));
-      if (idx >= 0) { currentEpisodeIndex = idx; loadEpisodeStream(allEpisodes[idx]); }
-    };
-    container.appendChild(item);
-  });
-  if (currentEpisodeIndex >= 0) {
-    var playing = container.querySelector(".episode-item.playing");
-    if (playing) setTimeout(function() { playing.scrollIntoView({ behavior: "smooth", block: "center" }); }, 200);
-  }
-}
-
-function loadEpisodeStream(ep) {
-  if (!currentDetail) return;
-  var epUrl = PROXY_URL + encodeURIComponent(API_BASE + "/stream/series/" + currentDetail.id + ":" + ep.season + ":" + ep.number + ".json");
-  showStatus("Loading S" + ep.season + " E" + ep.number + "...");
-  fetchJson(epUrl, 2).then(function(data) {
-    hideStatus();
-    var streams = data && data.streams ? data.streams : [];
-    if (streams.length > 0) {
-      currentStreams = streams;
-      currentSelectedStream = 0;
-      showPlayerPage(streams[0].url, streams[0].fallbackUrl, currentDetail.name, "S" + ep.season + " E" + ep.number + " - " + ep.name, streams[0].subtitle || "");
-    } else { showToast("No stream for this episode", "error"); }
-  }).catch(function(err) { hideStatus(); showToast("Failed: " + err.message, "error"); });
-}
-
-function onDetailPlay() {
-  if (!currentStreams || currentStreams.length === 0) { showToast("No streams available", "error"); return; }
-  if (allEpisodes.length > 0 && currentEpisodeIndex < 0) {
-    currentEpisodeIndex = 0;
-    loadEpisodeStream(allEpisodes[0]);
-    return;
-  }
-  var s = currentStreams[currentSelectedStream];
-  showPlayerPage(s.url, s.fallbackUrl, currentDetail.name, "", s.subtitle || "");
-}
-
-// ================================================================
-// PLAYER PAGE
-// ================================================================
-function showPlayerPage(rawUrl, fallbackUrl, title, episodeLabel, subtitle) {
-  showPage("playerPage");
-  document.getElementById("playerPage").classList.add("active");
-  document.getElementById("playerTitle").textContent = title + (episodeLabel ? " - " + episodeLabel : "");
-  document.getElementById("playerSub").textContent = subtitle || "";
-  var wlBtn = document.getElementById("playerWlBtn");
-  if (wlBtn && currentDetail) wlBtn.textContent = isWatchlisted(currentDetail.id) ? "In My List" : "My List";
-  var trBtn = document.getElementById("playerTrailerBtn");
-  if (trBtn && currentDetail) trBtn.style.display = (currentDetail.trailers && currentDetail.trailers.length) ? "" : "none";
-  var epTab = document.getElementById("ptabEpisodes");
-  if (allEpisodes.length > 0) { epTab.style.display = ""; showPlayerTab("episodes"); }
-  else { epTab.style.display = "none"; showPlayerTab("related"); }
-  renderPlayerEpisodes();
-  loadRelatedContent();
-  renderPlayerInfo();
-  startPlayback(rawUrl, fallbackUrl);
-  startSaveInterval();
-  var scrollArea = document.getElementById("playerScrollArea");
-  if (scrollArea) scrollArea.scrollTop = 0;
-}
-
-function showPlayerTab(tabName) {
-  var tabs = document.querySelectorAll(".player-tab");
-  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
-  var contents = document.querySelectorAll(".player-tab-content");
-  for (var j = 0; j < contents.length; j++) contents[j].classList.remove("active");
-  if (tabName === "episodes") {
-    document.getElementById("ptabEpisodes").classList.add("active");
-    document.getElementById("playerTabEpisodes").classList.add("active");
-  } else if (tabName === "related") {
-    document.querySelectorAll(".player-tab")[1].classList.add("active");
-    document.getElementById("playerTabRelated").classList.add("active");
-  } else if (tabName === "info") {
-    document.querySelectorAll(".player-tab")[2].classList.add("active");
-    document.getElementById("playerTabInfo").classList.add("active");
-  }
-}
-
-function renderPlayerEpisodes() {
-  var container = document.getElementById("playerEpisodeArea");
-  if (!container) return;
-  if (!allEpisodes.length) { container.innerHTML = '<div class="empty-state"><p>No episodes for this title</p></div>'; return; }
-  var seasons = {};
-  allEpisodes.forEach(function(ep) { if (!seasons[ep.season]) seasons[ep.season] = []; seasons[ep.season].push(ep); });
-  var seasonNums = Object.keys(seasons).map(Number).sort(function(a, b) { return a - b; });
-
-  var html = "";
-  html += '<div class="player-ep-actions-bar"><button class="player-ep-select-btn" onclick="selectAllEpisodes()">Select All</button><button class="player-ep-select-btn primary" id="batchDlBtn" onclick="downloadSelectedEpisodes()">Download Selected</button></div>';
-
-  if (seasonNums.length > 1) {
-    html += '<div class="season-tabs">';
-    seasonNums.forEach(function(s) {
-      html += '<button class="season-tab' + (s === currentSeason ? ' active' : '') + '" data-season="' + s + '" onclick="selectPlayerSeason(' + s + ')">Season ' + s + '</button>';
-    });
-    html += '</div>';
-  }
-
-  var eps = seasons[currentSeason] || allEpisodes;
-  html += '<div id="playerEpisodeList">';
-  eps.forEach(function(ep) {
-    var globalIdx = -1;
-    for (var i = 0; i < allEpisodes.length; i++) {
-      if (allEpisodes[i].season === ep.season && allEpisodes[i].number === ep.number) { globalIdx = i; break; }
-    }
-    var isPlaying = globalIdx === currentEpisodeIndex;
-    var isChecked = !!selectedEpDownload[globalIdx];
-    html += '<div class="player-ep-item' + (isPlaying ? ' playing' : '') + '" onclick="playEpisodeFromList(' + globalIdx + ')"><div class="player-ep-check' + (isChecked ? ' checked' : '') + '" onclick="event.stopPropagation();toggleEpDownload(' + globalIdx + ')"></div><div class="player-ep-num">' + ep.number + '</div><div class="player-ep-info"><div class="player-ep-name">' + ep.name + '</div><div class="player-ep-date">' + ep.released + (ep.duration ? " | " + ep.duration : "") + (isPlaying ? ' <span class="player-ep-now">Now Playing</span>' : '') + '</div></div><button class="player-ep-dl-btn" onclick="event.stopPropagation();downloadSingleEpisode(' + globalIdx + ')" title="Download"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button></div>';
-  });
-  html += '</div>';
-  container.innerHTML = html;
-  updateBatchDownloadBar();
-}
-
-function selectPlayerSeason(seasonNum) {
-  currentSeason = parseInt(seasonNum);
-  renderPlayerEpisodes();
-}
-
-function playEpisodeFromList(globalIdx) {
-  if (globalIdx < 0 || globalIdx >= allEpisodes.length) return;
-  currentEpisodeIndex = globalIdx;
-  var ep = allEpisodes[globalIdx];
-  currentSeason = ep.season;
-  loadEpisodeStream(ep);
-  renderPlayerEpisodes();
-}
-
-function loadRelatedContent() {
-  if (!currentDetail) return;
-  var container = document.getElementById("playerRelatedGrid");
-  container.innerHTML = '<div class="skeleton-row"><div class="skeleton skeleton-poster"></div><div class="skeleton skeleton-poster"></div><div class="skeleton skeleton-poster"></div><div class="skeleton skeleton-poster"></div></div>';
-  var currentGenres = [];
-  if (currentDetail.genres) currentGenres = Array.isArray(currentDetail.genres) ? currentDetail.genres : [currentDetail.genres];
-  var type = currentDetail.type || "movie";
-  var catalogId = type === "movie" ? "moviebay-all-movies" : "moviebay-all-series";
-  var url = PROXY_URL + encodeURIComponent(API_BASE + "/catalog/" + type + "/" + catalogId + ".json");
-  fetchJson(url).then(function(data) {
-    var items = data && data.metas ? data.metas : [];
-    items = items.filter(function(item) { return item.id !== currentDetail.id; });
-    if (currentGenres.length > 0) {
-      var genreFiltered = items.filter(function(item) {
-        if (!item.genres) return false;
-        var itemGenres = Array.isArray(item.genres) ? item.genres : [item.genres];
-        for (var i = 0; i < currentGenres.length; i++) {
-          for (var j = 0; j < itemGenres.length; j++) {
-            if (String(itemGenres[j]).toLowerCase() === String(currentGenres[i]).toLowerCase()) return true;
-          }
-        }
-        return false;
-      });
-      if (genreFiltered.length >= 4) items = genreFiltered;
-    }
-    items = items.slice(0, 20);
-    renderRelatedGrid(items);
-  }).catch(function() {
-    container.innerHTML = '<div class="empty-state"><p>Could not load related content</p></div>';
-  });
-}
-
-function renderRelatedGrid(items) {
-  var container = document.getElementById("playerRelatedGrid");
-  if (!items.length) { container.innerHTML = '<div class="empty-state"><div class="empty-icon">&#127909;</div><h3>No related titles</h3></div>'; return; }
-  container.innerHTML = "";
-  var grid = document.createElement("div");
-  grid.className = "poster-grid";
-  grid.style.padding = "0";
-  items.forEach(function(meta) { grid.appendChild(createPosterCard(meta)); });
-  container.appendChild(grid);
-}
-
-function renderPlayerInfo() {
-  var container = document.getElementById("playerInfoContent");
-  if (!currentDetail || !container) return;
-  var meta = currentDetail;
-  var html = '<div style="padding-bottom:20px">';
-  if (meta.description) html += '<p style="font-size:14px;line-height:1.7;color:var(--text-2);margin-bottom:16px">' + meta.description + '</p>';
-  html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">';
-  var genres = meta.genres ? (Array.isArray(meta.genres) ? meta.genres : [meta.genres]) : [];
-  genres.forEach(function(g) { html += '<div class="detail-tag">' + g + '</div>'; });
-  if (meta.vj) html += '<div class="detail-tag vj-tag">VJ: ' + meta.vj + '</div>';
-  html += '</div>';
-  html += '<div class="detail-meta-row" style="margin-bottom:12px">';
-  if (meta.releaseInfo) html += '<div class="detail-meta-item">' + meta.releaseInfo + '</div>';
-  if (meta.runtime) html += '<div class="detail-meta-item">' + meta.runtime + '</div>';
-  if (meta.imdbRating) html += '<div class="detail-imdb">IMDb ' + meta.imdbRating + '</div>';
-  if (meta.certification) html += '<div class="detail-badge">' + meta.certification + '</div>';
-  html += '</div>';
-  if (meta.cast && meta.cast.length) {
-    html += '<div class="sub-section-title" style="margin-top:12px">Cast</div><p style="font-size:13px;color:var(--text-2);line-height:1.6">' + (Array.isArray(meta.cast) ? meta.cast.join(", ") : meta.cast) + '</p>';
-  }
-  if (meta.director) html += '<div class="sub-section-title" style="margin-top:12px">Director</div><p style="font-size:13px;color:var(--text-2)">' + meta.director + '</p>';
-  if (meta.writer) html += '<div class="sub-section-title" style="margin-top:12px">Writer</div><p style="font-size:13px;color:var(--text-2)">' + meta.writer + '</p>';
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-// ================================================================
-// PAGE NAVIGATION
-// ================================================================
-function showPage(pageId) {
-  var pages = ["homePage", "detailPage", "playerPage"];
-  pages.forEach(function(id) {
-    var el = document.getElementById(id);
-    if (id === pageId) {
-      el.style.display = id === "playerPage" ? "flex" : "block";
-      el.classList.add("page-enter");
-      setTimeout(function() { el.classList.remove("page-enter"); }, 350);
-    } else {
-      el.style.display = "none";
-      el.classList.remove("active");
-    }
-  });
-  window.scrollTo(0, 0);
-}
-
-function cleanupVideo() {
-  var video = document.getElementById("videoPlayer");
-  if (!video) return;
-  if (video._stallCleanup) video._stallCleanup();
-  video.pause();
-  video.removeAttribute("src");
-  video.load();
-}
-
-function backToDetail() {
-  saveProgress();
-  stopSaveInterval();
-  cleanupVideo();
-  document.getElementById("playerPage").classList.remove("active");
-  if (allEpisodes.length > 0 && currentEpisodeIndex >= 0) {
-    renderEpisodeItems(allEpisodes.filter(function(ep) { return ep.season === currentSeason; }));
-  }
-  showPage("detailPage");
-}
-
-function showHome() {
-  saveProgress();
-  stopSaveInterval();
-  cleanupVideo();
-  document.getElementById("playerPage").classList.remove("active");
-  showPage("homePage");
-  currentCategoryFilter = "all";
-  renderCategoryTabs();
-  loadHome();
-}
-
-// ================================================================
-// VIDEO PLAYBACK
-// ================================================================
-function startPlayback(rawStreamUrl, fallbackUrl) {
-  var video = document.getElementById("videoPlayer");
-  var streamUrl = resolveStreamUrl(rawStreamUrl);
-  var resolvedFallback = fallbackUrl ? resolveStreamUrl(fallbackUrl) : null;
-
-  console.log("[Omega] Raw:", rawStreamUrl ? rawStreamUrl.substring(0, 100) : "null");
-  console.log("[Omega] Resolved:", streamUrl ? streamUrl.substring(0, 100) : "null");
-
-  if (video._stallCleanup) video._stallCleanup();
-  video.pause();
-  video.removeAttribute("src");
-  video.load();
-  hideStatus();
-
-  setTimeout(function() {
-    video.src = streamUrl;
-    video.load();
-    video.play().catch(function() { showStatus("Tap play to start"); });
-  }, 100);
-
-  var stallTimer = null;
-  var recoverTime = 0;
-  var fallbackUsed = false;
-
-  function onSeeking() {
-    recoverTime = video.currentTime;
-    if (stallTimer) clearTimeout(stallTimer);
-    stallTimer = setTimeout(function() {
-      if (video.paused || video.readyState < 3) {
-        var t = recoverTime;
-        video.pause();
-        video.removeAttribute("src");
-        video.load();
-        setTimeout(function() {
-          video.src = streamUrl;
-          video.addEventListener("loadedmetadata", function onMeta() {
-            video.removeEventListener("loadedmetadata", onMeta);
-            video.currentTime = t;
-            video.play();
-          });
-        }, 100);
-      }
-    }, 4000);
-  }
-
-  function onPlaying() { if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; } }
-
-  function onError() {
-    var err = video.error;
-    var errMsg = "Unknown error";
-    if (err) {
-      switch (err.code) {
-        case 1: errMsg = "Loading aborted"; break;
-        case 2: errMsg = "Network error"; break;
-        case 3: errMsg = "Decode error"; break;
-        case 4: errMsg = "Format not supported"; break;
-      }
-    }
-    if (resolvedFallback && !fallbackUsed && resolvedFallback !== streamUrl) {
-      fallbackUsed = true;
-      showStatus("Trying backup stream...");
-      video.pause();
-      video.removeAttribute("src");
-      video.load();
-      setTimeout(function() { video.src = resolvedFallback; video.load(); video.play().catch(function(){}); }, 100);
-      return;
-    }
-    showStatus("Error: " + errMsg + " - tap play to retry", "error");
-    setTimeout(hideStatus, 6000);
-  }
-
-  function onEnded() {
-    saveProgress();
-    if (currentEpisodeIndex >= 0 && currentEpisodeIndex < allEpisodes.length - 1) {
-      showStatus("Next episode starting...");
-      setTimeout(function() { hideStatus(); playNextEpisode(); }, 1500);
-    }
-  }
-
-  video.addEventListener("seeking", onSeeking);
-  video.addEventListener("playing", onPlaying);
-  video.addEventListener("error", onError);
-  video.addEventListener("ended", onEnded);
-
-  video._stallCleanup = function() {
-    video.removeEventListener("seeking", onSeeking);
-    video.removeEventListener("playing", onPlaying);
-    video.removeEventListener("error", onError);
-    video.removeEventListener("ended", onEnded);
-    if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; }
-    video._stallCleanup = null;
+var WORKER = "https://moviebay-proxy.milesdaglas.workers.dev";
+function proxyUrl(u){return WORKER+"/?url="+encodeURIComponent(u);}
+function videoProxy(u){return WORKER+"/video?url="+encodeURIComponent(u);}
+
+// ============================================================
+// STATE
+// ============================================================
+var state = {
+  watchlist: JSON.parse(localStorage.getItem("os_watchlist")||"[]"),
+  continueW: JSON.parse(localStorage.getItem("os_continue")||"[]"),
+  downloads: JSON.parse(localStorage.getItem("os_downloads")||"[]"),
+  loadedIds: new Set(),
+  allItems: [],
+  page: 1,
+  loading: false,
+  currentMovie: null,
+  currentStreams: [],
+  currentVJIndex: 0,
+  currentSeason: 1,
+  currentEpisode: null,
+  selectedEpisodes: new Set(),
+  heroItems: [],
+  heroIndex: 0,
+  heroTimer: null,
+  genreFilter: "all",
+  activeType: null
+};
+
+// ============================================================
+// UTILITIES
+// ============================================================
+function $(id){return document.getElementById(id);}
+function show(el){if(typeof el==="string")el=$(el);if(el)el.style.display="";}
+function hide(el){if(typeof el==="string")el=$(el);if(el)el.style.display="none";}
+function showFlex(el){if(typeof el==="string")el=$(el);if(el)el.style.display="flex";}
+function $(s){return document.getElementById(s);}
+
+function showToast(msg,type){
+  var t=$("toast");
+  t.textContent=msg;
+  t.className="toast show"+(type?" "+type:"");
+  setTimeout(function(){t.className="toast";},3000);
+}
+
+function formatBytes(b){
+  if(!b)return"? MB";
+  var mb=b/(1024*1024);
+  if(mb>=1024)return(mb/1024).toFixed(2)+" GB";
+  return mb.toFixed(1)+" MB";
+}
+
+function debounce(fn,ms){
+  var t;
+  return function(){
+    var args=arguments,ctx=this;
+    clearTimeout(t);
+    t=setTimeout(function(){fn.apply(ctx,args);},ms);
   };
 }
 
-function playPrevEpisode() {
-  if (currentEpisodeIndex > 0) {
-    currentEpisodeIndex--;
-    var ep = allEpisodes[currentEpisodeIndex];
-    currentSeason = ep.season;
-    loadEpisodeStream(ep);
-    renderPlayerEpisodes();
+function stripParam(url){return url.split("?download=")[0];}
+
+// ============================================================
+// API FUNCTIONS
+// ============================================================
+function fetchJSON(url){
+  return fetch(proxyUrl(url)).then(function(r){
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    return r.json();
+  });
+}
+
+function fetchCatalog(type,catalogId,skip,limit){
+  var url=API_BASE+"/catalog/"+type+"/"+catalogId+".json?skip="+(skip||0)+"&limit="+(limit||20);
+  return fetchJSON(url);
+}
+
+function fetchSearch(type,query){
+  var url=API_BASE+"/catalog/"+type+"/moviebay-all-"+type+"s/search="+encodeURIComponent(query)+".json";
+  return fetchJSON(url);
+}
+
+function fetchMeta(type,id){
+  var url=API_BASE+"/meta/"+type+"/"+id+".json";
+  return fetchJSON(url);
+}
+
+function fetchStreams(type,id,season,ep){
+  var url;
+  if(type==="series"&&season&&ep){
+    url=API_BASE+"/stream/series/"+id+":"+season+":"+ep+".json";
+  }else{
+    url=API_BASE+"/stream/"+type+"/"+id+".json";
+  }
+  return fetchJSON(url);
+}
+
+// ============================================================
+// HERO CAROUSEL
+// ============================================================
+function initHero(items){
+  state.heroItems=items.slice(0,8);
+  state.heroIndex=0;
+  renderHeroSlides();
+  startHeroAutoplay();
+}
+
+function renderHeroSlides(){
+  var container=$("heroSlides");
+  var dots=$("heroDots");
+  container.innerHTML="";
+  dots.innerHTML="";
+  state.heroItems.forEach(function(item,i){
+    var slide=document.createElement("div");
+    slide.className="hero-slide"+(i===0?" active":"");
+    var img=item.poster||"";
+    var bg=item.background||item.poster||"";
+    slide.innerHTML='<img src="'+bg+'" alt="" onerror="this.src=\''+img+'\'"><div class="hero-slide-overlay"></div>';
+    container.appendChild(slide);
+
+    var dot=document.createElement("button");
+    dot.className="hero-dot"+(i===0?" active":"");
+    dot.onclick=function(){goToHeroSlide(i);};
+    dots.appendChild(dot);
+  });
+  updateHeroContent();
+}
+
+function updateHeroContent(){
+  var item=state.heroItems[state.heroIndex];
+  if(!item)return;
+  $("heroTitle").textContent=item.name||item.title||"";
+  $("heroDesc").textContent=item.description||item.overview||"";
+  var slides=document.querySelectorAll(".hero-slide");
+  slides.forEach(function(s,i){s.className="hero-slide"+(i===state.heroIndex?" active":"");});
+  var dots=document.querySelectorAll(".hero-dot");
+  dots.forEach(function(d,i){d.className="hero-dot"+(i===state.heroIndex?" active":"");});
+}
+
+function goToHeroSlide(i){
+  state.heroIndex=i;
+  updateHeroContent();
+  resetHeroAutoplay();
+}
+
+function nextHeroSlide(){
+  state.heroIndex=(state.heroIndex+1)%state.heroItems.length;
+  updateHeroContent();
+}
+
+function prevHeroSlide(){
+  state.heroIndex=(state.heroIndex-1+state.heroItems.length)%state.heroItems.length;
+  updateHeroContent();
+}
+
+function startHeroAutoplay(){
+  clearInterval(state.heroTimer);
+  state.heroTimer=setInterval(nextHeroSlide,6000);
+}
+
+function resetHeroAutoplay(){
+  clearInterval(state.heroTimer);
+  startHeroAutoplay();
+}
+
+function heroPlay(){
+  var item=state.heroItems[state.heroIndex];
+  if(item)openDetail(item.type||"movie",item.id);
+}
+
+function heroInfo(){
+  var item=state.heroItems[state.heroIndex];
+  if(item)openDetail(item.type||"movie",item.id);
+}
+
+// ============================================================
+// CONTENT RENDERING
+// ============================================================
+function renderMovieCard(item){
+  var isVJ=(item.name||"").toLowerCase().includes("vj")||(item.vjNames&&item.vjNames.length>0);
+  var badge=isVJ?'<div class="movie-card-vj">VJ</div>':"";
+  return '<div class="movie-card" onclick="openDetail(\''+(item.type||"movie")+'\',\''+item.id+'\')">'+
+    '<img src="'+(item.poster||"")+'" alt="" loading="lazy" onerror="this.src=\'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 300%22 fill=%22%23333%22><rect width=%22200%22 height=%22300%22/><text x=%22100%22 y=%22150%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2214%22>No Image</text></svg>\'">'+
+    badge+
+    '<div class="movie-card-overlay">'+
+    '<div class="movie-card-title">'+(item.name||item.title||"")+'</div>'+
+    '<div class="movie-card-year">'+(item.year||item.releaseInfo||"")+'</div>'+
+    '</div>'+
+    (item.imdbRating?'<div class="movie-card-rating">&#9733; '+item.imdbRating+'</div>':"")+
+    '</div>';
+}
+
+function renderGrid(containerId,items){
+  var container=$(containerId);
+  if(!container)return;
+  container.innerHTML=items.map(renderMovieCard).join("");
+}
+
+function addToState(items){
+  items.forEach(function(item){
+    if(!state.loadedIds.has(item.id)){
+      state.loadedIds.add(item.id);
+      state.allItems.push(item);
+    }
+  });
+}
+
+// ============================================================
+// LOAD SECTIONS
+// ============================================================
+function loadAllSections(){
+  // Trending Movies
+  fetchCatalog("movie","moviebay-trending-movies",0,20).then(function(d){
+    var items=(d.metas||[]).map(function(m){m.type="movie";return m;});
+    addToState(items);
+    renderGrid("trendingGrid",items);
+    if(state.heroItems.length===0)initHero(items);
+  }).catch(function(){});
+
+  // Latest Movies
+  fetchCatalog("movie","moviebay-latest-movies",0,20).then(function(d){
+    var items=(d.metas||[]).map(function(m){m.type="movie";return m;});
+    addToState(items);
+    renderGrid("latestGrid",items);
+    if(state.heroItems.length<3)initHero(items);
+  }).catch(function(){});
+
+  // VJ Movies
+  fetchCatalog("movie","moviebay-vj-movies",0,20).then(function(d){
+    var items=(d.metas||[]).map(function(m){m.type="movie";return m;});
+    addToState(items);
+    renderGrid("vjGrid",items);
+  }).catch(function(){});
+
+  // Popular Movies
+  fetchCatalog("movie","moviebay-popular-movies",0,20).then(function(d){
+    var items=(d.metas||[]).map(function(m){m.type="movie";return m;});
+    addToState(items);
+    renderGrid("popularGrid",items);
+  }).catch(function(){});
+
+  // Latest Series
+  fetchCatalog("series","moviebay-latest-series",0,20).then(function(d){
+    var items=(d.metas||[]).map(function(m){m.type="series";return m;});
+    addToState(items);
+    renderGrid("seriesGrid",items);
+  }).catch(function(){});
+
+  // Popular Series
+  fetchCatalog("series","moviebay-popular-series",0,20).then(function(d){
+    var items=(d.metas||[]).map(function(m){m.type="series";return m;});
+    addToState(items);
+    renderGrid("popularSeriesGrid",items);
+  }).catch(function(){});
+
+  // Trending Series
+  fetchCatalog("series","moviebay-trending-series",0,20).then(function(d){
+    var items=(d.metas||[]).map(function(m){m.type="series";return m;});
+    addToState(items);
+    renderGrid("trendingSeriesGrid",items);
+  }).catch(function(){});
+
+  renderContinueWatching();
+  renderWatchlist();
+}
+
+// ============================================================
+// GENRE FILTER
+// ============================================================
+function filterGenre(genre,el){
+  state.genreFilter=genre;
+  document.querySelectorAll(".cat-tab").forEach(function(t){t.classList.remove("active");});
+  if(el)el.classList.add("active");
+  // Re-render all grids with filter
+  if(genre==="all"){
+    loadAllSections();
+  }else{
+    // Search by genre
+    fetchSearch("movie",genre).then(function(d){
+      var items=(d.metas||[]).map(function(m){m.type="movie";return m;});
+      addToState(items);
+      renderGrid("trendingGrid",items);
+    }).catch(function(){});
   }
 }
 
-function playNextEpisode() {
-  if (currentEpisodeIndex < allEpisodes.length - 1) {
-    currentEpisodeIndex++;
-    var ep = allEpisodes[currentEpisodeIndex];
-    currentSeason = ep.season;
-    loadEpisodeStream(ep);
-    renderPlayerEpisodes();
+// ============================================================
+// SEARCH
+// ============================================================
+var searchDebounceTimer;
+$("searchInput").addEventListener("input",function(){
+  var q=this.value.trim();
+  clearTimeout(searchDebounceTimer);
+  if(q.length<2){hide($("searchDropdown"));return;}
+  searchDebounceTimer=setTimeout(function(){doSearch(q);},300);
+});
+
+$("searchInput").addEventListener("focus",function(){
+  if(this.value.trim().length>=2)show($("searchDropdown"));
+});
+
+document.addEventListener("click",function(e){
+  if(!e.target.closest(".search-wrap"))hide($("searchDropdown"));
+});
+
+function fuzzyScore(text,query){
+  text=text.toLowerCase();
+  query=query.toLowerCase();
+  if(text.includes(query))return 100;
+  var words=query.split(" ");
+  var score=0;
+  words.forEach(function(w){
+    if(text.includes(w))score+=50;
+    else{
+      // fuzzy: check chars in order
+      var ti=0;
+      for(var ci=0;ci<w.length;ci++){
+        ti=text.indexOf(w[ci],ti);
+        if(ti===-1){score-=10;break;}
+        ti++;
+        score+=5;
+      }
+    }
+  });
+  return score;
+}
+
+function doSearch(query){
+  Promise.all([
+    fetchSearch("movie",query).catch(function(){return{metas:[]};}),
+    fetchSearch("series",query).catch(function(){return{metas:[]};})
+  ]).then(function(results){
+    var all=[];
+    results.forEach(function(r){
+      (r.metas||[]).forEach(function(m){all.push(m);});
+    });
+    // Fuzzy sort
+    all.sort(function(a,b){
+      return fuzzyScore(b.name||b.title||"",query)-fuzzyScore(a.name||a.title||"",query);
+    });
+    showSearchResults(all.slice(0,15),query);
+  });
+}
+
+function showSearchResults(items,query){
+  var dd=$("searchDropdown");
+  if(!items.length){
+    dd.innerHTML='<div class="search-empty">No results for "'+query+'"</div>';
+    show(dd);
+    return;
+  }
+  dd.innerHTML=items.map(function(item){
+    var type=item.type||"movie";
+    return '<div class="search-item" onclick="openDetail(\''+type+'\',\''+item.id+'\');hide($("searchDropdown"));">'+
+      '<img src="'+(item.poster||"")+'" alt="" onerror="this.style.display=\'none\'">'+
+      '<div class="search-item-info">'+
+      '<h4>'+(item.name||item.title||"")+'</h4>'+
+      '<p>'+(item.year||item.releaseInfo||"")+' - '+(type==="series"?"Series":"Movie")+'</p>'+
+      '</div></div>';
+  }).join("");
+  show(dd);
+}
+
+// ============================================================
+// MOVIE DETAIL
+// ============================================================
+var currentDetailType,currentDetailId,currentMeta,currentStreams=[],currentVJOptions=[],selectedVJIdx=0;
+
+function openDetail(type,id){
+  currentDetailType=type;
+  currentDetailId=id;
+  state.currentMovie={type:type,id:id};
+  show($("detailOverlay"));
+  $("detailOverlay").scrollTop=0;
+
+  // Reset
+  $("detailTitle").textContent="Loading...";
+  $("detailDesc").textContent="";
+  $("detailBadges").innerHTML="";
+  $("detailBackdrop").src="";
+  $("detailPoster").src="";
+  hide($("vjSelector"));
+  hide($("episodesContainer"));
+
+  // Fetch meta
+  fetchMeta(type,id).then(function(d){
+    var meta=d.meta||d;
+    currentMeta=meta;
+    $("detailTitle").textContent=meta.name||meta.title||"";
+    $("detailDesc").textContent=meta.description||meta.overview||"";
+    $("detailBackdrop").src=meta.background||meta.poster||"";
+    $("detailPoster").src=meta.poster||"";
+
+    // Badges
+    var badges="";
+    if(meta.imdbRating)badges+='<span class="badge badge-rating">&#9733; '+meta.imdbRating+'</span>';
+    if(meta.releaseInfo||meta.year)badges+='<span class="badge badge-year">'+(meta.releaseInfo||meta.year)+'</span>';
+    badges+='<span class="badge badge-type">'+(type==="series"?"Series":"Movie")+'</span>';
+    (meta.genres||[]).slice(0,4).forEach(function(g){
+      badges+='<span class="badge badge-genre">'+g+'</span>';
+    });
+    $("detailBadges").innerHTML=badges;
+
+    // Watchlist button
+    var inWL=isInWatchlist(id);
+    $("detailWLBtn").innerHTML=inWL?"&#10003; In My List":"&#43; My List";
+
+    // Episodes for series
+    if(type==="series"&&meta.videos&&meta.videos.length>0){
+      show($("episodesContainer"));
+      renderSeasons(meta);
+    }
+
+    // Fetch streams for VJ
+    fetchStreams(type,id,1,1).then(function(sd){
+      var streams=sd.streams||[];
+      currentStreams=streams;
+      renderVJSelector(streams);
+    }).catch(function(){
+      currentStreams=[];
+      hide($("vjSelector"));
+    });
+  }).catch(function(){
+    $("detailTitle").textContent="Error loading";
+    $("detailDesc").textContent="Could not load details. Check your connection and try again.";
+  });
+}
+
+function closeDetail(){
+  hide($("detailOverlay"));
+}
+
+// ============================================================
+// VJ SELECTION
+// ============================================================
+function renderVJSelector(streams){
+  if(!streams||streams.length<2){
+    hide($("vjSelector"));
+    currentVJOptions=[];
+    return;
+  }
+
+  // Parse VJ names from stream names
+  var vjGroups={};
+  streams.forEach(function(s){
+    var name=(s.name||s.title||"Original").trim();
+    // Extract VJ name: before | or - with quality
+    var vjName=name;
+    var sepIndex=name.search(/\s*[|\/]\s*/);
+    if(sepIndex===-1)sepIndex=name.search(/\s+-\s+/);
+    if(sepIndex>0){
+      vjName=name.substring(0,sepIndex).trim();
+    }
+    if(!vjGroups[vjName])vjGroups[vjName]=[];
+    vjGroups[vjName].push(s);
+  });
+
+  var vjNames=Object.keys(vjGroups);
+  if(vjNames.length<2){
+    hide($("vjSelector"));
+    currentVJOptions=[];
+    return;
+  }
+
+  currentVJOptions=vjNames.map(function(n){
+    return{name:n,streams:vjGroups[n]};
+  });
+
+  var chips=$("vjChips");
+  chips.innerHTML=currentVJOptions.map(function(vj,i){
+    return '<div class="vj-chip'+(i===0?" active":"")+'" onclick="selectVJ('+i+')">'+vj.name+
+      '<span class="vj-chip-label">'+vj.streams.length+' version'+(vj.streams.length>1?"s":"")+'</span></div>';
+  }).join("");
+  selectedVJIdx=0;
+  show($("vjSelector"));
+}
+
+function selectVJ(idx){
+  selectedVJIdx=idx;
+  var chips=$("vjChips").querySelectorAll(".vj-chip");
+  chips.forEach(function(c,i){c.className="vj-chip"+(i===idx?" active":"");});
+  showToast("Selected: "+currentVJOptions[idx].name,"success");
+
+  // Also update player VJ chips if player is open
+  if($("playerOverlay").classList.contains("show")){
+    renderPlayerVJChips();
   }
 }
 
-// ================================================================
-// INIT
-// ================================================================
-function init() {
-  renderCategoryTabs();
-  loadHome();
+function renderPlayerVJChips(){
+  if(!currentVJOptions||currentVJOptions.length<2){hide($("playerVJBar"));return;}
+  show($("playerVJBar"));
+  var chips=$("playerVJChips");
+  chips.innerHTML=currentVJOptions.map(function(vj,i){
+    return '<div class="player-vj-chip'+(i===selectedVJIdx?" active":"")+'" onclick="selectVJPlayer('+i+')">'+vj.name+'</div>';
+  }).join("");
+}
+
+function selectVJPlayer(idx){
+  selectedVJIdx=idx;
+  var chips=$("playerVJChips").querySelectorAll(".player-vj-chip");
+  chips.forEach(function(c,i){c.className="player-vj-chip"+(i===idx?" active":"");});
+
+  // Switch stream
+  var vj=currentVJOptions[idx];
+  if(vj&&vj.streams.length>0){
+    var streamUrl=resolveStreamUrl(vj.streams[0].url||vj.streams[0].stream||"");
+    $("videoPlayer").src=streamUrl;
+    $("videoPlayer").play().catch(function(){});
+    showToast("Switched to: "+vj.name,"success");
+  }
+}
+
+function getSelectedVJStream(){
+  if(currentVJOptions.length>0&&currentVJOptions[selectedVJIdx]){
+    return currentVJOptions[selectedVJIdx].streams[0];
+  }
+  return currentStreams[0]||null;
+}
+
+// ============================================================
+// STREAM URL RESOLVER
+// ============================================================
+function resolveStreamUrl(url){
+  url=stripParam(url);
+  if(!url)return"";
+  if(url.endsWith(".m3u8")||url.includes("/stream/hls/"))return url;
+  if(url.includes("cdn.zflixtv.com")||(url.includes(".mp4")&&!url.includes("s-u.in")))return url;
+  if(url.includes("s-u.in/stream/v/"))return videoProxy(url);
+  return videoProxy(url);
+}
+
+function getDownloadUrl(url){
+  url=stripParam(url);
+  if(!url)return"";
+  if(url.endsWith(".m3u8")||url.includes("/stream/hls/"))return null;
+  return videoProxy(url);
+}
+
+function getFilename(url,title){
+  var name=title||"video";
+  name=name.replace(/[^a-zA-Z0-9 _-]/g,"").trim().replace(/\s+/g,"_");
+  if(url.includes(".mp4"))return name+".mp4";
+  return name+".mp4";
+}
+
+// ============================================================
+// DETAIL PLAY / DOWNLOAD
+// ============================================================
+function detailPlay(){
+  var stream=getSelectedVJStream();
+  if(!stream){
+    // Try fetching streams
+    fetchStreams(currentDetailType,currentDetailId,state.currentSeason,1).then(function(d){
+      var streams=d.streams||[];
+      if(streams.length===0){showToast("No streams found","error");return;}
+      currentStreams=streams;
+      renderVJSelector(streams);
+      var s=getSelectedVJStream()||streams[0];
+      var url=resolveStreamUrl(s.url||s.stream||"");
+      openPlayer(url,currentMeta.name||currentMeta.title,"");
+    }).catch(function(){showToast("Failed to load stream","error");});
+    return;
+  }
+  var url=resolveStreamUrl(stream.url||stream.stream||"");
+  openPlayer(url,currentMeta.name||currentMeta.title,"");
+}
+
+function detailDownload(){
+  var stream=getSelectedVJStream();
+  if(!stream){
+    showToast("Select a VJ version first","error");
+    return;
+  }
+  var rawUrl=stripParam(stream.url||stream.stream||"");
+  var title=currentMeta.name||currentMeta.title||"video";
+  var filename=getFilename(rawUrl,title);
+  startDownload(rawUrl,filename);
+}
+
+function detailWatchlist(){
+  if(!currentMeta)return;
+  toggleWatchlist({
+    id:currentDetailId,
+    type:currentDetailType,
+    name:currentMeta.name||currentMeta.title,
+    poster:currentMeta.poster,
+    year:currentMeta.releaseInfo||currentMeta.year
+  });
+  var inWL=isInWatchlist(currentDetailId);
+  $("detailWLBtn").innerHTML=inWL?"&#10003; In My List":"&#43; My List";
+  showToast(inWL?"Added to My List":"Removed from My List","success");
+  renderWatchlist();
+}
+
+function detailTrailer(){
+  if(currentMeta&&currentMeta.trailer){
+    window.open(currentMeta.trailer,"_blank");
+  }else{
+    // Search YouTube for trailer
+    var q=encodeURIComponent((currentMeta.name||"")+" trailer");
+    window.open("https://www.youtube.com/results?search_query="+q,"_blank");
+  }
+}
+
+// ============================================================
+// SEASONS & EPISODES
+// ============================================================
+function renderSeasons(meta){
+  var videos=meta.videos||[];
+  var seasons={};
+  videos.forEach(function(v){
+    var s=v.season||1;
+    if(!seasons[s])seasons[s]=[];
+    seasons[s].push(v);
+  });
+  var seasonNums=Object.keys(seasons).sort(function(a,b){return a-b;});
+
+  var tabs=$("seasonTabs");
+  tabs.innerHTML=seasonNums.map(function(s,i){
+    return '<div class="season-tab'+(i===0?" active":"")+'" onclick="switchSeason('+s+',this)">Season '+s+'</div>';
+  }).join("");
+
+  state.currentSeason=parseInt(seasonNums[0])||1;
+  state.selectedEpisodes.clear();
+  renderEpisodes(seasons[state.currentSeason]||[]);
+}
+
+function switchSeason(season,el){
+  state.currentSeason=season;
+  state.selectedEpisodes.clear();
+  document.querySelectorAll(".season-tab").forEach(function(t){t.classList.remove("active");});
+  if(el)el.classList.add("active");
+
+  var meta=currentMeta;
+  var videos=(meta.videos||[]).filter(function(v){return(v.season||1)===season;});
+  renderEpisodes(videos);
+}
+
+function renderEpisodes(episodes){
+  var list=$("episodeList");
+  list.innerHTML=episodes.map(function(ep){
+    var epNum=ep.episode||ep.number||0;
+    return '<div class="episode-item" id="ep_'+epNum+'" onclick="toggleEpisodeSelect('+epNum+')">'+
+      '<div class="episode-check" id="epcheck_'+epNum+'"></div>'+
+      '<img class="episode-thumb" src="'+(ep.thumbnail||ep.poster||currentMeta.poster||"")+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
+      '<div class="episode-info">'+
+      '<h4>Episode '+epNum+': '+(ep.name||ep.title||"")+'</h4>'+
+      '<p>'+(ep.description||ep.overview||"")+'</p>'+
+      '</div>'+
+      '<button class="episode-dl" onclick="event.stopPropagation();downloadEpisode('+epNum+','+state.currentSeason+')">&#11015; DL</button>'+
+      '</div>';
+  }).join("");
+}
+
+function toggleEpisodeSelect(epNum){
+  var el=$("epcheck_"+epNum);
+  var item=$("ep_"+epNum);
+  if(state.selectedEpisodes.has(epNum)){
+    state.selectedEpisodes.delete(epNum);
+    el.classList.remove("checked");
+    item.classList.remove("selected");
+  }else{
+    state.selectedEpisodes.add(epNum);
+    el.classList.add("checked");
+    item.classList.add("selected");
+  }
+}
+
+function selectAllEpisodes(){
+  var checks=document.querySelectorAll(".episode-check");
+  checks.forEach(function(c,i){
+    var epNum=i+1;
+    state.selectedEpisodes.add(epNum);
+    c.classList.add("checked");
+  });
+  document.querySelectorAll(".episode-item").forEach(function(e){e.classList.add("selected");});
+}
+
+function deselectAllEpisodes(){
+  state.selectedEpisodes.clear();
+  document.querySelectorAll(".episode-check").forEach(function(c){c.classList.remove("checked");});
+  document.querySelectorAll(".episode-item").forEach(function(e){e.classList.remove("selected");});
+}
+
+function downloadSelectedEpisodes(){
+  if(state.selectedEpisodes.size===0){showToast("Select episodes first","error");return;}
+  var count=0;
+  state.selectedEpisodes.forEach(function(epNum){
+    setTimeout(function(){downloadEpisode(epNum,state.currentSeason);},count*2000);
+    count++;
+  });
+  showToast("Starting "+count+" downloads...","success");
+}
+
+function downloadEpisode(epNum,season){
+  var title=(currentMeta.name||"Series")+"_S"+season+"E"+epNum;
+  fetchStreams("series",currentDetailId,season,epNum).then(function(d){
+    var streams=d.streams||[];
+    if(streams.length===0){showToast("No stream for E"+epNum,"error");return;}
+    var s=getSelectedVJStream()||streams[0];
+    var rawUrl=stripParam(s.url||s.stream||"");
+    var filename=getFilename(rawUrl,title);
+    startDownload(rawUrl,filename);
+  }).catch(function(){showToast("Failed to get stream for E"+epNum,"error");});
+}
+
+// ============================================================
+// PLAYER
+// ============================================================
+var playerCurrentUrl="";
+var playerCurrentTitle="";
+
+function openPlayer(url,title,desc){
+  playerCurrentUrl=url;
+  playerCurrentTitle=title;
+  show($("playerOverlay"));
+  $("playerTitleBar").textContent=title;
+  $("playerInfoTitle").textContent=title;
+  $("playerInfoDesc").textContent=desc||"";
+  var video=$("videoPlayer");
+  video.src=url;
+  video.play().catch(function(){});
+
+  // VJ chips in player
+  renderPlayerVJChips();
+
+  // Episodes in player
+  if(currentDetailType==="series"&&currentMeta&&currentMeta.videos){
+    show($("playerEpisodes"));
+    renderPlayerEpisodes();
+  }else{
+    hide($("playerEpisodes"));
+  }
+
+  // Continue watching
+  updateContinueWatching({
+    id:currentDetailId,
+    type:currentDetailType,
+    name:title,
+    poster:currentMeta?currentMeta.poster:"",
+    url:url,
+    time:0
+  });
+
+  // Sticky video on scroll
+  video.addEventListener("timeupdate",function(){
+    if(currentDetailId){
+      updateContinueWatching({
+        id:currentDetailId,
+        type:currentDetailType,
+        name:title,
+        poster:currentMeta?currentMeta.poster:"",
+        url:url,
+        time:video.currentTime,
+        duration:video.duration
+      });
+    }
+  });
+}
+
+function closePlayer(){
+  var video=$("videoPlayer");
+  video.pause();
+  video.src="";
+  hide($("playerOverlay"));
+}
+
+function togglePiP(){
+  var video=$("videoPlayer");
+  if(document.pictureInPictureElement){
+    document.exitPictureInPicture();
+  }else if(video.requestPictureInPicture){
+    video.requestPictureInPicture().catch(function(){showToast("PiP not supported","error");});
+  }else{
+    showToast("PiP not supported","error");
+  }
+}
+
+function renderPlayerEpisodes(){
+  if(!currentMeta||!currentMeta.videos)return;
+  var videos=currentMeta.videos.filter(function(v){return(v.season||1)===state.currentSeason;});
+  $("playerEpList").innerHTML=videos.map(function(ep){
+    var epNum=ep.episode||ep.number||0;
+    return '<div class="player-ep-item" onclick="playEpisode('+epNum+')">'+
+      '<img src="'+(ep.thumbnail||ep.poster||currentMeta.poster||"")+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
+      '<div class="player-ep-item-info">'+
+      '<h5>Ep '+epNum+': '+(ep.name||ep.title||"")+'</h5>'+
+      '<p>'+(ep.description||ep.overview||"").substring(0,60)+'...</p>'+
+      '</div>'+
+      '<div class="player-ep-item-actions">'+
+      '<button class="episode-dl" onclick="event.stopPropagation();downloadEpisode('+epNum+','+state.currentSeason+')">&#11015;</button>'+
+      '</div></div>';
+  }).join("");
+}
+
+function playEpisode(epNum){
+  state.currentEpisode=epNum;
+  fetchStreams("series",currentDetailId,state.currentSeason,epNum).then(function(d){
+    var streams=d.streams||[];
+    if(streams.length===0){showToast("No stream found","error");return;}
+    currentStreams=streams;
+    var s=getSelectedVJStream()||streams[0];
+    var url=resolveStreamUrl(s.url||s.stream||"");
+    var video=$("videoPlayer");
+    video.src=url;
+    video.play().catch(function(){});
+    $("playerTitleBar").textContent=(currentMeta.name||"")+" - S"+state.currentSeason+"E"+epNum;
+  }).catch(function(){showToast("Failed to load episode","error");});
+}
+
+// ============================================================
+// DOWNLOADS (REAL DOWNLOADS)
+// ============================================================
+var downloadIdCounter=Date.now();
+
+function startDownload(url,filename){
+  if(!url){showToast("Invalid download URL","error");return;}
+
+  var dlId="dl_"+(++downloadIdCounter);
+  var entry={
+    id:dlId,
+    filename:filename,
+    status:"starting",
+    progress:0,
+    message:"Preparing download...",
+    url:url
+  };
+  state.downloads.push(entry);
+  saveDownloads();
   renderDownloadList();
-  updateDownloadBadge();
-  setTimeout(function() { document.getElementById("loadingOverlay").classList.add("hidden"); }, 800);
+  toggleDownloadPanel(true);
+  showToast("Download started: "+filename,"success");
+
+  // Real download via Worker proxy
+  doRealDownload(dlId,url,filename);
 }
 
-document.addEventListener("DOMContentLoaded", init);
+function doRealDownload(dlId,url,filename){
+  var downloadUrl=getDownloadUrl(url);
+  if(!downloadUrl){
+    updateDownloadEntry(dlId,"error",0,"HLS streams cannot be downloaded directly. Try the MP4 version.");
+    return;
+  }
+
+  updateDownloadEntry(dlId,"downloading",0,"Connecting to server...");
+
+  fetch(downloadUrl).then(function(response){
+    if(!response.ok)throw new Error("Server returned "+response.status);
+
+    var contentLength=response.headers.get("Content-Length");
+    var total=contentLength?parseInt(contentLength):0;
+
+    if(!response.body||!response.body.getReader){
+      // Fallback: simple blob download
+      return response.blob().then(function(blob){
+        if(blob.size===0)throw new Error("Empty file received");
+        saveBlob(blob,filename);
+        updateDownloadEntry(dlId,"complete",100,"Download complete! File saved. ("+formatBytes(blob.size)+")");
+      });
+    }
+
+    // Streaming download with progress
+    var reader=response.body.getReader();
+    var chunks=[];
+    var received=0;
+
+    function pump(){
+      return reader.read().then(function(result){
+        if(result.done){
+          if(received===0)throw new Error("No data received");
+
+          var blob=new Blob(chunks);
+          if(blob.size===0)throw new Error("File is empty");
+
+          saveBlob(blob,filename);
+          updateDownloadEntry(dlId,"complete",100,"Download complete! File saved. ("+formatBytes(blob.size)+")");
+          showToast("Download complete: "+filename,"success");
+          return;
+        }
+
+        chunks.push(result.value);
+        received+=result.value.length;
+
+        var percent=total?Math.round((received/total)*100):0;
+        var msg=formatBytes(received)+(total?" / "+formatBytes(total):"")+" ("+percent+"%)";
+        updateDownloadEntry(dlId,"downloading",percent,msg);
+
+        return pump();
+      });
+    }
+
+    return pump();
+  }).catch(function(err){
+    updateDownloadEntry(dlId,"error",0,"Download failed: "+err.message);
+    showToast("Download failed: "+err.message,"error");
+  });
+}
+
+function saveBlob(blob,filename){
+  var blobUrl=URL.createObjectURL(blob);
+  var a=document.createElement("a");
+  a.href=blobUrl;
+  a.download=filename;
+  a.style.display="none";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){
+    if(a.parentNode)a.parentNode.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+  },200);
+}
+
+function updateDownloadEntry(dlId,status,progress,message){
+  for(var i=0;i<state.downloads.length;i++){
+    if(state.downloads[i].id===dlId){
+      state.downloads[i].status=status;
+      state.downloads[i].progress=progress;
+      state.downloads[i].message=message;
+      break;
+    }
+  }
+  saveDownloads();
+  renderDownloadList();
+}
+
+function renderDownloadList(){
+  var list=$("downloadList");
+  if(state.downloads.length===0){
+    list.innerHTML='<div class="no-downloads">No downloads yet</div>';
+    $("dlBadge").style.display="none";
+    return;
+  }
+
+  // Update badge
+  var activeCount=state.downloads.filter(function(d){return d.status==="downloading"||d.status==="starting";}).length;
+  var badge=$("dlBadge");
+  if(activeCount>0){
+    badge.textContent=activeCount;
+    badge.style.display="flex";
+  }else{
+    badge.style.display="none";
+  }
+
+  list.innerHTML=state.downloads.map(function(d){
+    var progressClass="";
+    if(d.status==="complete")progressClass=" complete";
+    if(d.status==="error")progressClass=" error";
+    var statusClass="";
+    if(d.status==="complete")statusClass=" complete";
+    if(d.status==="error")statusClass=" error";
+    return '<div class="dl-entry">'+
+      '<div class="dl-entry-title">'+
+      '<span>'+d.filename+'</span>'+
+      '<button onclick="removeDownload(\''+d.id+'\')">&#10005;</button>'+
+      '</div>'+
+      '<div class="dl-progress-bar">'+
+      '<div class="dl-progress-fill'+progressClass+'" style="width:'+d.progress+'%"></div>'+
+      '</div>'+
+      '<div class="dl-entry-status'+statusClass+'">'+d.message+'</div>'+
+      '</div>';
+  }).join("");
+}
+
+function removeDownload(dlId){
+  state.downloads=state.downloads.filter(function(d){return d.id!==dlId;});
+  saveDownloads();
+  renderDownloadList();
+}
+
+function saveDownloads(){
+  // Only save metadata, not the actual download state for persistence
+  var toSave=state.downloads.map(function(d){
+    return{id:d.id,filename:d.filename,status:d.status,progress:d.progress,message:d.message};
+  });
+  localStorage.setItem("os_downloads",JSON.stringify(toSave));
+}
+
+function toggleDownloadPanel(forceOpen){
+  var panel=$("downloadPanel");
+  if(forceOpen===true){
+    panel.classList.add("show");
+  }else{
+    panel.classList.toggle("show");
+  }
+}
+
+function downloadCurrentVideo(){
+  if(!playerCurrentUrl){showToast("No video to download","error");return;}
+  var rawUrl=stripParam(playerCurrentUrl);
+  // If player URL is already a proxy URL, extract original
+  if(rawUrl.includes(WORKER+"/video?url=")){
+    rawUrl=decodeURIComponent(rawUrl.split(WORKER+"/video?url=")[1]);
+  }
+  var filename=getFilename(rawUrl,playerCurrentTitle);
+  startDownload(rawUrl,filename);
+}
+
+// ============================================================
+// WATCHLIST
+// ============================================================
+function isInWatchlist(id){
+  return state.watchlist.some(function(w){return w.id===id;});
+}
+
+function toggleWatchlist(item){
+  var idx=state.watchlist.findIndex(function(w){return w.id===item.id;});
+  if(idx>=0){
+    state.watchlist.splice(idx,1);
+  }else{
+    state.watchlist.push(item);
+  }
+  localStorage.setItem("os_watchlist",JSON.stringify(state.watchlist));
+}
+
+function renderWatchlist(){
+  if(state.watchlist.length===0){hide($("watchlistSection"));return;}
+  show($("watchlistSection"));
+  renderGrid("watchlistGrid",state.watchlist);
+}
+
+function showWatchlistSection(){
+  renderWatchlist();
+  $("watchlistSection").scrollIntoView({behavior:"smooth"});
+  setActiveNav(-1);
+}
+
+// ============================================================
+// CONTINUE WATCHING
+// ============================================================
+function updateContinueWatching(item){
+  var idx=state.continueW.findIndex(function(c){return c.id===item.id;});
+  if(idx>=0){
+    state.continueW[idx]=item;
+  }else{
+    state.continueW.unshift(item);
+    if(state.continueW.length>20)state.continueW.pop();
+  }
+  localStorage.setItem("os_continue",JSON.stringify(state.continueW));
+  renderContinueWatching();
+}
+
+function renderContinueWatching(){
+  if(state.continueW.length===0){hide($("continueSection"));return;}
+  show($("continueSection"));
+  var container=$("continueGrid");
+  container.innerHTML=state.continueW.map(function(item){
+    var progress=0;
+    if(item.duration&&item.time)progress=Math.round((item.time/item.duration)*100);
+    return '<div class="cw-card" onclick="openDetail(\''+item.type+'\',\''+item.id+'\')">'+
+      '<img src="'+(item.poster||"")+'" alt="" onerror="this.style.visibility=\'hidden\'">'+
+      '<div class="cw-overlay">'+
+      '<div class="cw-title">'+item.name+'</div>'+
+      '<div class="cw-progress-bar"><div class="cw-progress-fill" style="width:'+progress+'%"></div></div>'+
+      '</div></div>';
+  }).join("");
+}
+
+// ============================================================
+// CATEGORY / NAVIGATION
+// ============================================================
+function goHome(){
+  window.scrollTo({top:0,behavior:"smooth"});
+  setActiveNav(0);
+  showAllSections();
+}
+
+function showCategory(type){
+  state.activeType=type;
+  setActiveNav(type==="movie"?1:2);
+  // Scroll to relevant section
+  if(type==="movie"){
+    $("trendingSection").scrollIntoView({behavior:"smooth"});
+  }else{
+    $("seriesSection").scrollIntoView({behavior:"smooth"});
+  }
+}
+
+function showAllSections(){
+  ["continueSection","watchlistSection","trendingSection","latestSection","vjSection","popularSection","seriesSection","popularSeriesSection","trendingSeriesSection"].forEach(function(id){
+    var el=$(id);
+    if(el&&el.innerHTML.trim())show(el);
+  });
+}
+
+function setActiveNav(idx){
+  document.querySelectorAll(".nav-link").forEach(function(l,i){l.classList.toggle("active",i===idx);});
+  document.querySelectorAll(".bnav-item").forEach(function(l,i){l.classList.toggle("active",i===idx);});
+}
+
+// ============================================================
+// INFINITE SCROLL
+// ============================================================
+var scrollPage=1;
+var scrollLoading=false;
+var scrollCatalogs=[
+  {type:"movie",id:"moviebay-all-movies",grid:"trendingGrid"},
+  {type:"series",id:"moviebay-all-series",grid:"seriesGrid"}
+];
+var scrollCatIndex=0;
+
+window.addEventListener("scroll",debounce(function(){
+  if(scrollLoading)return;
+  var scrollPos=window.innerHeight+window.scrollY;
+  var threshold=document.body.offsetHeight-800;
+  if(scrollPos>=threshold){
+    loadMoreContent();
+  }
+},200));
+
+function loadMoreContent(){
+  if(scrollLoading)return;
+  scrollLoading=true;
+  show($("scrollLoader"));
+
+  var cat=scrollCatalogs[scrollCatIndex%scrollCatalogs.length];
+  fetchCatalog(cat.type,cat.id,scrollPage*20,20).then(function(d){
+    var items=(d.metas||[]).map(function(m){m.type=cat.type;return m;});
+    var newItems=items.filter(function(item){return !state.loadedIds.has(item.id);});
+    addToState(newItems);
+
+    var grid=$(cat.grid);
+    if(grid){
+      var html=newItems.map(renderMovieCard).join("");
+      grid.insertAdjacentHTML("beforeend",html);
+    }
+
+    scrollPage++;
+    if(scrollPage>5){scrollPage=1;scrollCatIndex++;}
+    scrollLoading=false;
+    hide($("scrollLoader"));
+  }).catch(function(){
+    scrollLoading=false;
+    hide($("scrollLoader"));
+  });
+}
+
+// ============================================================
+// HEADER SCROLL EFFECT
+// ============================================================
+window.addEventListener("scroll",function(){
+  var header=$("mainHeader");
+  if(window.scrollY>50){
+    header.style.background="rgba(13,13,26,0.98)";
+  }else{
+    header.style.background="linear-gradient(to bottom,rgba(13,13,26,.98),rgba(13,13,26,.8))";
+  }
+});
+
+// ============================================================
+// VIDEO KEYBOARD SHORTCUTS
+// ============================================================
+document.addEventListener("keydown",function(e){
+  var video=$("videoPlayer");
+  if(!$("playerOverlay").classList.contains("show"))return;
+  if(e.key===" "||e.key==="k"){
+    e.preventDefault();
+    video.paused?video.play():video.pause();
+  }else if(e.key==="f"){
+    if(video.requestFullscreen)video.requestFullscreen();
+  }else if(e.key==="m"){
+    video.muted=!video.muted;
+  }else if(e.key==="ArrowRight"){
+    video.currentTime+=10;
+  }else if(e.key==="ArrowLeft"){
+    video.currentTime-=10;
+  }else if(e.key==="Escape"){
+    closePlayer();
+  }
+});
+
+// ============================================================
+// INIT
+// ============================================================
+function init(){
+  loadAllSections();
+  renderDownloadList();
+
+  // Hide loader after content starts loading
+  setTimeout(function(){
+    $("loaderScreen").classList.add("hide");
+    setTimeout(function(){$("loaderScreen").style.display="none";},500);
+  },800);
+
+  // Register service worker for PWA
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("/sw.js").catch(function(){});
+  }
+}
+
+// Start
+init();
 </script>
 </body>
 </html>
