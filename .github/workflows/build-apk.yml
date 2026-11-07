@@ -15,32 +15,54 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - uses: gradle/actions/setup-gradle@v3
-
       - name: Generate Android Project
         run: |
           mkdir -p app/src/main/java/com/omegastream/app
           mkdir -p app/src/main/res/mipmap-xxxhdpi
+          mkdir -p gradle/wrapper
 
-          # Download app icon
-          curl -sL "https://raw.githubusercontent.com/nicetech-creator/omegastream/main/icon.png" -o app/src/main/res/mipmap-xxxhdpi/ic_launcher.png || python3 -c "
-          import base64, struct, zlib
+          # Generate icon
+          python3 -c "
+          import struct, zlib
           w=h=192; raw=b''
           for y in range(h):
               raw += b'\\x00'
               for x in range(w):
                   cx,cy=w//2,h//2; dx,dy=x-cx,y-cy; d=(dx*dx+dy*dy)**0.5
-                  if d<80: raw+=bytes([0,220,130,255])
-                  elif d<90: raw+=bytes([0,180,100,255])
-                  else: raw+=bytes([0,0,0,255])
+                  if d<65: raw+=bytes([0,220,130,255])
+                  elif d<75: raw+=bytes([0,180,100,255])
+                  else: raw+=bytes([10,10,12,255])
           def chunk(t,d): return struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d)&0xffffffff)
           ihdr=struct.pack('>IIBBBBB',w,h,8,6,0,0,0)
           png=b'\\x89PNG\\r\\n\\x1a\\n'+chunk(b'IHDR',ihdr)+chunk(b'IDAT',zlib.compress(raw))+chunk(b'IEND',b'')
           open('app/src/main/res/mipmap-xxxhdpi/ic_launcher.png','wb').write(png)
           "
 
+          # Gradle wrapper properties (pins Gradle 8.3 - compatible with AGP 8.1)
+          cat > gradle/wrapper/gradle-wrapper.properties << 'PROPS'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.3-bin.zip
+          networkTimeout=10000
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          PROPS
+
+          # Download gradle wrapper jar
+          curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.3.0/gradle/wrapper/gradle-wrapper.jar" -o gradle/wrapper/gradle-wrapper.jar
+
+          # gradlew script
+          cat > gradlew << 'GRADLEW'
+          #!/bin/sh
+          APP_BASE_NAME=`basename "$0"`
+          APP_HOME=`dirname "$0"`
+          CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
+          exec java -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
+          GRADLEW
+          chmod +x gradlew
+
           # settings.gradle
-          cat > settings.gradle << 'GRADLE'
+          cat > settings.gradle << 'EOF'
           pluginManagement {
               repositories { google(); mavenCentral(); gradlePluginPortal() }
           }
@@ -49,23 +71,23 @@ jobs:
           }
           rootProject.name = "OmegaStream"
           include ':app'
-          GRADLE
+          EOF
 
           # build.gradle
-          cat > build.gradle << 'GRADLE'
+          cat > build.gradle << 'EOF'
           plugins {
               id 'com.android.application' version '8.1.0' apply false
           }
-          GRADLE
+          EOF
 
           # gradle.properties
-          cat > gradle.properties << 'PROPS'
+          cat > gradle.properties << 'EOF'
           org.gradle.jvmargs=-Xmx2048m
           android.useAndroidX=true
-          PROPS
+          EOF
 
           # app/build.gradle
-          cat > app/build.gradle << 'GRADLE'
+          cat > app/build.gradle << 'EOF'
           plugins { id 'com.android.application' }
           android {
               namespace 'com.omegastream.app'
@@ -78,10 +100,10 @@ jobs:
                   versionName "1.0"
               }
           }
-          GRADLE
+          EOF
 
           # AndroidManifest.xml
-          cat > app/src/main/AndroidManifest.xml << 'MANIFEST'
+          cat > app/src/main/AndroidManifest.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET" />
@@ -104,10 +126,10 @@ jobs:
                   </activity>
               </application>
           </manifest>
-          MANIFEST
+          EOF
 
           # MainActivity.java
-          cat > app/src/main/java/com/omegastream/app/MainActivity.java << 'JAVA'
+          cat > app/src/main/java/com/omegastream/app/MainActivity.java << 'EOF'
           package com.omegastream.app;
 
           import android.app.Activity;
@@ -202,13 +224,10 @@ jobs:
               @Override protected void onResume() { super.onResume(); webView.onResume(); }
               @Override protected void onDestroy() { if (webView != null) webView.destroy(); super.onDestroy(); }
           }
-          JAVA
+          EOF
 
       - name: Build APK
-        run: |
-          chmod +x gradlew || echo "Generating gradle wrapper"
-          gradle wrapper --gradle-version 8.3 || true
-          ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
