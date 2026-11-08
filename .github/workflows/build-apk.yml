@@ -106,6 +106,7 @@ jobs:
 
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+          <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
               <application
                   android:allowBackup="true"
@@ -144,6 +145,14 @@ jobs:
           import android.widget.TextView;
           import android.os.Handler;
           import android.os.Looper;
+          import android.app.DownloadManager;
+          import android.content.Context;
+          import android.net.Uri;
+          import android.os.Environment;
+          import android.webkit.DownloadListener;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.URLUtil;
+          import android.widget.Toast;
 
           public class MainActivity extends Activity {
               private WebView webView;
@@ -174,6 +183,14 @@ jobs:
                   settings.setAllowContentAccess(true);
                   settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
                   settings.setUserAgentString(settings.getUserAgentString() + " OmegaStream/1.0");
+
+                  webView.addJavascriptInterface(new DownloadBridge(), "OmegaDL");
+                  webView.setDownloadListener(new DownloadListener() {
+                      @Override
+                      public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
+                          enqueueDownload(url, URLUtil.guessFileName(url, contentDisposition, mimetype), mimetype);
+                      }
+                  });
 
                   webView.setWebChromeClient(new WebChromeClient() {
                       @Override
@@ -215,6 +232,35 @@ jobs:
                           }
                       }
                   }, 15000);
+              }
+
+              private class DownloadBridge {
+                  @JavascriptInterface
+                  public boolean download(String url, String fileName) {
+                      enqueueDownload(url, fileName, "video/mp4");
+                      return true;
+                  }
+              }
+
+              private void enqueueDownload(final String url, final String fileName, final String mime) {
+                  runOnUiThread(new Runnable() {
+                      @Override
+                      public void run() {
+                          try {
+                              DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
+                              req.setTitle(fileName);
+                              req.setDescription("OmegaStream");
+                              if (mime != null && mime.length() > 0) req.setMimeType(mime);
+                              req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                              req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
+                              DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+                              dm.enqueue(req);
+                              Toast.makeText(MainActivity.this, "Downloading to Downloads/" + fileName, Toast.LENGTH_LONG).show();
+                          } catch (Exception e) {
+                              Toast.makeText(MainActivity.this, "Download failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                          }
+                      }
+                  });
               }
 
               private void retryOrShowError() {

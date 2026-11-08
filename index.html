@@ -726,31 +726,20 @@ var isProcessingQueue = false;
 var selectedEpDownload = {};
 
 // --- SYSTEM DOWNLOAD: Triggers Android DownloadManager ---
-// Flow: JS creates hidden iframe -> WebView intercepts URL with "dl=1" ->
-// Java shouldOverrideUrlLoading catches it -> Java enqueues via DownloadManager ->
-// System shows save location prompt FIRST -> Downloads with notification progress
+// Flow: JS calls window.OmegaDL.download(url, name) (JS bridge in MainActivity) ->
+// Java enqueues via DownloadManager -> saves to Downloads with notification progress
 function triggerSystemDownload(rawUrl, fileName) {
   var dlUrl = getDownloadableUrl(rawUrl);
   if (!dlUrl) return false;
 
-  // Build system download URL with special parameters Java can intercept
-  var sysUrl = dlUrl;
-  if (sysUrl.indexOf(WORKER_BASE) === 0) {
-    sysUrl += (sysUrl.indexOf("?") !== -1 ? "&" : "?") + "dl=1&fn=" + encodeURIComponent(fileName);
+  if (!(window.OmegaDL && typeof window.OmegaDL.download === "function")) return false;
+  try {
+    window.OmegaDL.download(dlUrl, fileName);
+    return true;
+  } catch (e) {
+    console.log("[Download] bridge error:", e && e.message);
+    return false;
   }
-
-  // Create hidden iframe to trigger the download URL
-  var iframe = document.createElement("iframe");
-  iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;border:none;";
-  iframe.src = sysUrl;
-  document.body.appendChild(iframe);
-
-  // Clean up iframe after delay
-  setTimeout(function() {
-    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-  }, 120000);
-
-  return true;
 }
 
 // --- BROWSER DOWNLOAD: fetch + blob for web browsers ---
@@ -911,8 +900,8 @@ function processDownloadQueue() {
     nextItem.message = "Preparing...";
     renderDownloadList();
 
-    if (isAndroidApp()) {
-      // ANDROID: System DownloadManager handles everything
+    if (window.OmegaDL) {
+      // ANDROID APP: native DownloadManager via OmegaDL bridge
       // It will ask where to save FIRST, then download with notification progress
       console.log("[Download] System download:", dlUrl.substring(0, 120));
       var triggered = triggerSystemDownload(rawUrl, nextItem.fileName);
