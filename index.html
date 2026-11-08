@@ -2910,7 +2910,12 @@ function registerServiceWorker() {
     navigator.serviceWorker.register("sw.js").catch(function(e) { console.log("[SW] register failed:", e && e.message); });
   });
   navigator.serviceWorker.addEventListener("message", function(ev) {
-    if (ev.data && ev.data.type === "update-ready") showToast("Update ready - reopen the app to get it", "info");
+    if (ev.data && ev.data.type === "update-ready") {
+      var playing = document.getElementById("playerPage").style.display === "flex";
+      var busy = downloadQueue.some(function(d) { return d.status === "downloading"; });
+      if (!playing && !busy && !window.__swReloaded) { window.__swReloaded = true; location.reload(); }
+      else showToast("Update ready - reopen the app to get it", "info");
+    }
   });
 }
 

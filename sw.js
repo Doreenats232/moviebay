@@ -3,7 +3,7 @@
 // - API JSON via the proxy: network first, cached copy if offline
 // - Posters: cache first, capped
 // - Video / range requests: never touched
-var VERSION = "v1";
+var VERSION = "v2";
 var SHELL = "os-shell-" + VERSION;
 var API = "os-api-" + VERSION;
 var IMG = "os-img-" + VERSION;
@@ -12,16 +12,20 @@ var IMG_MAX = 150;
 var API_MAX = 60;
 
 self.addEventListener("install", function(e) {
-  e.waitUntil(caches.open(SHELL).then(function(c) { return c.addAll(SHELL_FILES); }).then(function() { return self.skipWaiting(); }));
+  e.waitUntil(caches.open(SHELL).then(function(c) { return c.addAll(SHELL_FILES.map(function(u) { return new Request(u, { cache: "reload" }); })); }).then(function() { return self.skipWaiting(); }));
 });
 
 self.addEventListener("activate", function(e) {
   e.waitUntil(
     caches.keys().then(function(keys) {
       return Promise.all(keys.filter(function(k) { return k.indexOf("os-") === 0 && k !== SHELL && k !== API && k !== IMG; }).map(function(k) { return caches.delete(k); }));
-    }).then(function() { return self.clients.claim(); })
+    }).then(function() { return self.clients.claim(); }).then(notifyUpdate)
   );
 });
+
+function notifyUpdate() {
+  return self.clients.matchAll().then(function(cs) { cs.forEach(function(c) { c.postMessage({ type: "update-ready" }); }); });
+}
 
 function trim(name, max) {
   caches.open(name).then(function(c) {
@@ -43,18 +47,17 @@ self.addEventListener("fetch", function(e) {
     e.respondWith(
       caches.open(SHELL).then(function(cache) {
         return cache.match(req, { ignoreSearch: true }).then(function(hit) {
+          var hitCopy = hit ? hit.clone() : null; // hit itself is consumed when served
           var net = fetch(req).then(function(res) {
-            if (res && res.ok) {
-              if (hit && req.mode === "navigate") {
-                var a = hit.headers.get("etag") || hit.headers.get("last-modified");
-                var b = res.headers.get("etag") || res.headers.get("last-modified");
-                if (a && b && a !== b) {
-                  self.clients.matchAll().then(function(cs) { cs.forEach(function(c) { c.postMessage({ type: "update-ready" }); }); });
-                }
-              }
-              cache.put(req, res.clone());
-            }
-            return res;
+            if (!res || !res.ok) return res;
+            var forCache = res.clone();
+            var forCompare = res.clone();
+            var changed = (hit && req.mode === "navigate")
+              ? Promise.all([hitCopy.text(), forCompare.text()]).then(function(t) { return t[0] !== t[1]; }).catch(function() { return false; })
+              : Promise.resolve(false);
+            return changed.then(function(isChanged) {
+              return cache.put(req, forCache).then(function() { if (isChanged) return notifyUpdate(); });
+            }).then(function() { return res; });
           }).catch(function() { return hit; });
           if (hit) { e.waitUntil(net); return hit; }
           return net.then(function(res) { return res || cache.match("index.html"); });
