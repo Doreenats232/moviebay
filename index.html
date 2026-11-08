@@ -283,6 +283,60 @@ input{outline:none;font-family:inherit}
 @media(min-width:768px){.poster-scroll{gap:16px}.poster-card{width:150px}.hero-carousel{height:520px}.hero-title{font-size:32px}.detail-hero{height:500px}.detail-title-text{font-size:32px}}
 @media(min-width:1024px){.poster-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}}
 @media(min-width:1200px){.poster-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}}
+
+#downloadFab{display:none!important}
+#bottomNav{position:fixed;left:0;right:0;bottom:0;z-index:600;display:flex;background:rgba(10,10,12,0.96);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--glass-border);padding:8px 0 calc(8px + env(safe-area-inset-bottom,0px))}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;color:var(--text-3);font-size:11px;font-weight:500;position:relative;padding:2px 0;transition:color .2s}
+.nav-item svg{width:22px;height:22px}
+.nav-item.active{color:var(--primary)}
+.nav-badge{position:absolute;top:-3px;left:calc(50% + 6px);min-width:16px;height:16px;border-radius:8px;background:var(--error);color:#fff;font-size:10px;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 4px}
+#libraryPage{display:none;min-height:100vh;min-height:100svh;padding-bottom:100px}
+.lib-tabs{display:flex;gap:8px;padding:6px 18px 12px;position:sticky;top:55px;z-index:90;background:var(--bg)}
+.lib-tab{padding:7px 16px;border-radius:var(--radius-pill);background:var(--card);color:var(--text-2);font-size:13px;font-weight:500}
+.lib-tab.active{background:var(--primary);color:#000;font-weight:600}
+.lib-sec{font-size:13px;color:var(--text-3);padding:10px 18px 4px;font-weight:600}
+.lib-row{display:flex;align-items:center;gap:12px;padding:8px 18px;cursor:pointer}
+.lib-row:active{background:var(--card-hover)}
+.lib-thumb{width:52px;height:74px;border-radius:8px;background:var(--card);overflow:hidden;flex-shrink:0}
+.lib-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.lib-info{flex:1;min-width:0}
+.lib-name{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lib-sub{font-size:12px;color:var(--text-3);margin-top:2px}
+.lib-bar{height:3px;background:rgba(255,255,255,0.15);border-radius:2px;margin-top:8px;overflow:hidden}
+.lib-bar>div{height:100%;background:var(--primary)}
+.lib-remove{width:32px;height:32px;border-radius:50%;background:var(--glass);color:var(--text-2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.lib-actions{display:flex;gap:8px;padding:4px 18px 10px}
+.lib-action{padding:7px 14px;border-radius:var(--radius-pill);background:var(--glass);color:var(--text);font-size:12px;font-weight:600;border:1px solid var(--glass-border)}
+#libDownloadList{padding:0 18px}
+.pc-overlay{position:absolute;inset:0;z-index:5;color:#fff;-webkit-user-select:none;user-select:none}
+.pc-zone{position:absolute;inset:0}
+.pc-ui{position:absolute;left:0;right:0;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s;pointer-events:none}
+.pc-overlay.show .pc-ui{opacity:1;visibility:visible}
+.pc-top{top:0;display:flex;align-items:center;gap:10px;padding:10px 12px;background:linear-gradient(to bottom,rgba(0,0,0,.65),transparent)}
+.pc-bottom{bottom:0;padding:18px 14px 8px;background:linear-gradient(to top,rgba(0,0,0,.7),transparent)}
+.pc-center{top:50%;transform:translateY(-50%);display:flex;justify-content:center;align-items:center;gap:30px}
+.pc-top button,.pc-center button,.pc-bottom button,.pc-bottom input{pointer-events:auto}
+.pc-btn{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center}
+.pc-main{width:58px;height:58px;background:var(--primary);color:#000}
+.pc-title{flex:1;min-width:0;text-align:center;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-top:4px}
+.pc-right{display:flex;align-items:center;gap:12px}
+.pc-chip{background:rgba(255,255,255,.14);color:#fff;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600}
+.pc-ico{background:none;color:#fff;display:flex;align-items:center;padding:0}
+.pc-ico.on{color:var(--primary)}
+#pcSeek{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;margin:0;display:block;--pos:0%;--buf:0%;background:linear-gradient(to right,var(--primary) var(--pos),rgba(255,255,255,.45) var(--pos),rgba(255,255,255,.45) var(--buf),rgba(255,255,255,.18) var(--buf))}
+#pcSeek::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--primary)}
+#pcSeek::-moz-range-thumb{width:14px;height:14px;border:none;border-radius:50%;background:var(--primary)}
+.pc-spin{position:absolute;top:50%;left:50%;width:38px;height:38px;margin:-19px 0 0 -19px;border:3px solid rgba(255,255,255,.25);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;display:none;pointer-events:none}
+.pc-spin.on{display:block}
+.pc-seekind{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.55);padding:8px 14px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none}
+.pc-seekind.on{opacity:1}
+.pc-pill{position:absolute;right:12px;bottom:62px;background:rgba(255,255,255,.2);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;font-size:12px;font-weight:600;padding:7px 14px;border-radius:20px;display:none;z-index:6}
+.pc-pill.on{display:block}
+.pc-next{position:absolute;right:12px;bottom:62px;background:rgba(0,0,0,.75);border:1px solid var(--glass-border);border-radius:14px;padding:8px 10px;font-size:12px;display:none;align-items:center;gap:8px;z-index:6}
+.pc-next.on{display:flex}
+.pc-next button{padding:5px 10px;border-radius:12px;font-size:12px;font-weight:600;background:var(--glass);color:#fff}
+.pc-next .go{background:var(--primary);color:#000}
 </style>
 </head>
 <body>
@@ -316,6 +370,19 @@ input{outline:none;font-family:inherit}
   <div class="home-content" id="homeContent"></div>
 </div>
 
+<div id="libraryPage">
+  <div class="header"><div class="header-logo">Library</div></div>
+  <div class="lib-tabs" id="libTabs"></div>
+  <div id="libContent"></div>
+</div>
+
+<nav id="bottomNav" aria-label="Main">
+  <button class="nav-item active" data-nav="home" onclick="navHome()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg>Home</button>
+  <button class="nav-item" data-nav="search" onclick="navSearch()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>Search</button>
+  <button class="nav-item" data-nav="library" onclick="navLibrary()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h4v16H4zM10 4h4v16h-4zM16.5 5.5l3.7-1 3 14.5-3.7 1z" transform="translate(-1 0)"/></svg>Library</button>
+  <button class="nav-item" data-nav="downloads" onclick="navDownloads()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Downloads<span class="nav-badge" id="navDlBadge">0</span></button>
+</nav>
+
 <div id="detailPage">
   <div class="detail-hero">
     <div class="detail-top-btns">
@@ -343,10 +410,37 @@ input{outline:none;font-family:inherit}
 
 <div id="playerPage">
   <div class="player-video-wrap" id="playerVideoWrap">
-    <div class="player-video-topbar">
-      <button class="player-back-btn" onclick="backToDetail()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+    <video id="videoPlayer" playsinline preload="metadata"></video>
+    <div class="pc-overlay show" id="pcOverlay">
+      <div class="pc-zone" id="pcZone"></div>
+      <div class="pc-spin" id="pcSpin"></div>
+      <div class="pc-seekind" id="pcSeekL" style="left:14%">-10s</div>
+      <div class="pc-seekind" id="pcSeekR" style="right:14%">+10s</div>
+      <div class="pc-ui pc-top">
+        <button class="pc-btn" onclick="backToDetail()" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+        <div class="pc-title" id="pcTitle"></div>
+        <button class="pc-btn" onclick="togglePiP()" aria-label="Picture in picture"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><rect x="12" y="12" width="8" height="6" rx="1" fill="currentColor"/></svg></button>
+      </div>
+      <div class="pc-ui pc-center">
+        <button class="pc-btn" onclick="pcSkip(-10)" aria-label="Back 10 seconds"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><text x="12" y="15.5" font-size="8" text-anchor="middle" fill="currentColor" stroke="none" font-family="sans-serif" font-weight="700">10</text></svg></button>
+        <button class="pc-btn pc-main" id="pcPlay" onclick="pcTogglePlay()" aria-label="Play or pause"></button>
+        <button class="pc-btn" onclick="pcSkip(10)" aria-label="Forward 10 seconds"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/><text x="12" y="15.5" font-size="8" text-anchor="middle" fill="currentColor" stroke="none" font-family="sans-serif" font-weight="700">10</text></svg></button>
+      </div>
+      <button class="pc-pill" id="pcSkipIntro" onclick="pcSkipIntro()">Skip 90s</button>
+      <div class="pc-next" id="pcNext"><span>Next episode in <b id="pcNextSec">10</b></span><button class="go" onclick="playNextEpisode()">Play now</button><button onclick="pcCancelNext()">Cancel</button></div>
+      <div class="pc-ui pc-bottom">
+        <input type="range" id="pcSeek" min="0" max="1000" value="0" step="1" aria-label="Seek">
+        <div class="pc-row">
+          <span id="pcTime">0:00 / 0:00</span>
+          <span class="pc-right">
+            <button class="pc-chip" id="pcSpeed" onclick="pcCycleSpeed()" aria-label="Playback speed">1x</button>
+            <button class="pc-ico" id="pcCC" onclick="pcToggleCC()" aria-label="Subtitles" style="display:none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><text x="12" y="15" font-size="7.5" text-anchor="middle" fill="currentColor" stroke="none" font-family="sans-serif" font-weight="700">CC</text></svg></button>
+            <button class="pc-ico" onclick="downloadCurrent()" aria-label="Download"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button>
+            <button class="pc-ico" id="pcFs" onclick="pcFullscreen()" aria-label="Fullscreen" style="display:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/></svg></button>
+          </span>
+        </div>
+      </div>
     </div>
-    <video id="videoPlayer" controls playsinline preload="metadata"></video>
   </div>
   <div class="player-vj-bar" id="playerVJBar" style="display:none">
     <div class="player-vj-label">Audio/VJ:</div>
@@ -998,19 +1092,19 @@ function updateDownloadBadge() {
   for (var i = 0; i < downloadQueue.length; i++) {
     if (downloadQueue[i].status === "queued" || downloadQueue[i].status === "downloading") active++;
   }
-  var fab = document.getElementById("downloadFab");
-  var badge = document.getElementById("downloadBadge");
-  if (active > 0 || downloadQueue.length > 0) {
-    fab.classList.add("show");
-    badge.style.display = "flex";
-    badge.textContent = active > 0 ? active : "";
-  } else { fab.classList.remove("show"); badge.style.display = "none"; }
+  var nb = document.getElementById("navDlBadge");
+  if (nb) { nb.style.display = active > 0 ? "flex" : "none"; nb.textContent = active; }
 }
 
 function renderDownloadList() {
   var container = document.getElementById("downloadList");
   if (!container) return;
-  if (!downloadQueue.length) { container.innerHTML = '<div class="empty-state"><p>No downloads yet</p></div>'; return; }
+  var libList = document.getElementById("libDownloadList");
+  if (!downloadQueue.length) {
+    container.innerHTML = '<div class="empty-state"><p>No downloads yet</p></div>';
+    if (libList) libList.innerHTML = '<div class="empty-state"><p>No downloads yet</p></div>';
+    return;
+  }
   var html = "";
   for (var i = downloadQueue.length - 1; i >= 0; i--) {
     var item = downloadQueue[i];
@@ -1039,6 +1133,7 @@ function renderDownloadList() {
     html += '<div class="dl-item ' + item.status + '"><div class="dl-item-status-icon ' + iconClass + '">' + iconChar + '</div><div class="dl-item-info"><div class="dl-item-name">' + esc(item.fileName) + '</div><div class="dl-item-status"><span>' + esc(statusText) + '</span>' + byteInfo + '</div>' + locationHtml + '<div class="dl-progress-wrap"><div class="dl-progress-fill" style="width:' + (item.progress || 0) + '%"></div></div></div></div>';
   }
   container.innerHTML = html;
+  if (libList) libList.innerHTML = html;
 }
 
 function toggleDownloadPanel() {
@@ -1648,7 +1743,7 @@ function renderContinueSection() {
   saved.forEach(function(item) {
     var card = document.createElement("div");
     card.className = "continue-card";
-    card.onclick = function() { currentEpisodeIndex = item.episodeIndex || -1; openDetail(item.type, item.id); };
+    card.onclick = function() { libOpen(item); };
     var pct = item.duration > 0 ? (item.currentTime / item.duration * 100) : 0;
     card.innerHTML = '<div class="continue-img-wrap"><img src="' + esc(item.poster) + '" alt="" onerror="this.src=\'\'"><div class="continue-progress" style="width:' + pct + '%"></div><div class="continue-play-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="#000"><polygon points="5,3 19,12 5,21"/></svg></div><button class="continue-remove" onclick="removeContinue(\'' + escJs(item.id) + '\', event)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div><div class="continue-info"><div class="continue-name">' + esc(item.name) + '</div><div class="continue-ep">' + esc(item.episodeInfo || "Resume") + '</div></div>';
     scroll.appendChild(card);
@@ -1923,6 +2018,9 @@ function showPlayerPage(rawUrl, fallbackUrl, title, episodeLabel, subtitle) {
   document.getElementById("playerPage").classList.add("active");
   document.getElementById("playerTitle").textContent = title + (episodeLabel ? " - " + episodeLabel : "");
   document.getElementById("playerSub").textContent = subtitle || "";
+  var pct = document.getElementById("pcTitle");
+  if (pct) pct.textContent = title + (episodeLabel ? " \u00b7 " + episodeLabel : "");
+  addToHistory();
   var wlBtn = document.getElementById("playerWlBtn");
   if (wlBtn && currentDetail) wlBtn.textContent = isWatchlisted(currentDetail.id) ? "In My List" : "My List";
   var trBtn = document.getElementById("playerTrailerBtn");
@@ -2109,7 +2207,7 @@ function renderPlayerInfo() {
 // PAGE NAVIGATION
 // ================================================================
 function showPage(pageId) {
-  var pages = ["homePage", "detailPage", "playerPage"];
+  var pages = ["homePage", "libraryPage", "detailPage", "playerPage"];
   pages.forEach(function(id) {
     var el = document.getElementById(id);
     if (id === pageId) {
@@ -2121,6 +2219,12 @@ function showPage(pageId) {
       el.classList.remove("active");
     }
   });
+  var nav = document.getElementById("bottomNav");
+  if (nav) {
+    var showNav = pageId === "homePage" || pageId === "libraryPage";
+    nav.style.display = showNav ? "flex" : "none";
+    if (showNav) navSetActive(pageId === "libraryPage" ? "library" : "home");
+  }
   window.scrollTo(0, 0);
 }
 
@@ -2179,6 +2283,7 @@ function getResumePoint() {
 
 function startPlayback(rawStreamUrl, fallbackUrl) {
   var video = document.getElementById("videoPlayer");
+  pcReset();
   var streamUrl = resolveStreamUrl(rawStreamUrl);
   var resolvedFallback = fallbackUrl ? resolveStreamUrl(fallbackUrl) : null;
 
@@ -2315,7 +2420,7 @@ function startPlayback(rawStreamUrl, fallbackUrl) {
 
   function onEnded() {
     saveProgress();
-    if (currentEpisodeIndex >= 0 && currentEpisodeIndex < allEpisodes.length - 1) {
+    if (!pcNextCancelled && currentEpisodeIndex >= 0 && currentEpisodeIndex < allEpisodes.length - 1) {
       showStatus("Next episode starting...");
       setTimeout(function() { hideStatus(); playNextEpisode(); }, 1500);
     }
@@ -2364,6 +2469,380 @@ function playNextEpisode() {
 // ================================================================
 // INIT
 // ================================================================
+// ================================================================
+// BOTTOM NAV + LIBRARY
+// ================================================================
+var libTab = "list";
+
+function navSetActive(name) {
+  var items = document.querySelectorAll("#bottomNav .nav-item");
+  for (var i = 0; i < items.length; i++) items[i].classList.toggle("active", items[i].getAttribute("data-nav") === name);
+}
+
+function navHome() {
+  var bar = document.getElementById("searchBar");
+  if (bar && bar.classList.contains("active")) { toggleSearch(); }
+  if (document.getElementById("homePage").style.display === "none") { showPage("homePage"); }
+  else { window.scrollTo({ top: 0, behavior: "smooth" }); }
+  navSetActive("home");
+}
+
+function navSearch() {
+  if (document.getElementById("homePage").style.display === "none") showPage("homePage");
+  var bar = document.getElementById("searchBar");
+  if (!bar.classList.contains("active")) bar.classList.add("active");
+  document.getElementById("searchInput").focus();
+  navSetActive("search");
+}
+
+function navLibrary() {
+  var bar = document.getElementById("searchBar");
+  if (bar && bar.classList.contains("active")) bar.classList.remove("active");
+  showPage("libraryPage");
+  renderLibrary();
+}
+
+function navDownloads() { toggleDownloadPanel(); }
+
+function getHistory() { try { return JSON.parse(localStorage.getItem("os_hist") || "[]"); } catch (e) { return []; } }
+
+function addToHistory() {
+  if (!currentDetail) return;
+  var epInfo = null;
+  if (currentEpisodeIndex >= 0 && currentEpisodeIndex < allEpisodes.length) {
+    var ep = allEpisodes[currentEpisodeIndex];
+    epInfo = "S" + ep.season + " E" + ep.number;
+  }
+  var h = getHistory().filter(function(x) { return x.id !== currentDetail.id; });
+  h.unshift({ id: currentDetail.id, type: currentDetail.type, name: currentDetail.name, poster: currentDetail.poster || currentDetail.background || "", episodeInfo: epInfo, episodeIndex: currentEpisodeIndex, timestamp: Date.now() });
+  h = h.slice(0, 60);
+  try { localStorage.setItem("os_hist", JSON.stringify(h)); } catch (e) {}
+}
+
+function clearHistory() {
+  try { localStorage.removeItem("os_hist"); } catch (e) {}
+  renderLibrary();
+  showToast("History cleared", "info");
+}
+
+function timeAgo(ts) {
+  var d = Math.max(0, Date.now() - (ts || 0));
+  var m = Math.floor(d / 60000);
+  if (m < 1) return "Just now";
+  if (m < 60) return m + " min ago";
+  var h = Math.floor(m / 60);
+  if (h < 24) return h + "h ago";
+  var days = Math.floor(h / 24);
+  return days === 1 ? "Yesterday" : days + " days ago";
+}
+
+function leftText(item) {
+  if (!item.duration) return "Resume";
+  var rem = Math.max(0, item.duration - (item.currentTime || 0));
+  var m = Math.round(rem / 60);
+  if (m >= 60) return Math.floor(m / 60) + "h " + (m % 60) + "m left";
+  return m + " min left";
+}
+
+function libOpen(item) {
+  currentEpisodeIndex = (item.episodeIndex === undefined || item.episodeIndex === null) ? -1 : item.episodeIndex;
+  openDetail(item.type, item.id);
+}
+
+function libRemoveContinue(id) {
+  var saved = getContinue().filter(function(p) { return p.id !== id; });
+  try { localStorage.setItem("os_cont", JSON.stringify(saved)); } catch (e) {}
+  renderLibrary();
+  showToast("Removed from Continue Watching", "info");
+}
+
+function libRow(item, sub, pct, onOpen, onRemove) {
+  var row = document.createElement("div");
+  row.className = "lib-row";
+  row.onclick = onOpen;
+  var th = document.createElement("div");
+  th.className = "lib-thumb";
+  if (item.poster) {
+    var im = document.createElement("img");
+    im.src = item.poster; im.alt = ""; im.loading = "lazy";
+    im.onerror = function() { this.style.display = "none"; };
+    th.appendChild(im);
+  }
+  var info = document.createElement("div");
+  info.className = "lib-info";
+  var n = document.createElement("div"); n.className = "lib-name"; n.textContent = item.name || "Unknown";
+  var sb = document.createElement("div"); sb.className = "lib-sub"; sb.textContent = sub;
+  info.appendChild(n); info.appendChild(sb);
+  if (pct >= 0) {
+    var bar = document.createElement("div"); bar.className = "lib-bar";
+    var f = document.createElement("div"); f.style.width = Math.min(100, Math.max(0, pct)) + "%";
+    bar.appendChild(f); info.appendChild(bar);
+  }
+  row.appendChild(th); row.appendChild(info);
+  if (onRemove) {
+    var rm = document.createElement("button");
+    rm.className = "lib-remove";
+    rm.setAttribute("aria-label", "Remove");
+    rm.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+    rm.onclick = function(e) { e.stopPropagation(); onRemove(); };
+    row.appendChild(rm);
+  }
+  return row;
+}
+
+function setLibTab(t) { libTab = t; renderLibrary(); }
+
+function renderLibrary() {
+  var tabs = [["list", "My list"], ["history", "History"], ["downloads", "Downloads"]];
+  var th = "";
+  tabs.forEach(function(t) { th += '<button class="lib-tab' + (libTab === t[0] ? ' active' : '') + '" onclick="setLibTab(\'' + t[0] + '\')">' + t[1] + '</button>'; });
+  document.getElementById("libTabs").innerHTML = th;
+  var c = document.getElementById("libContent");
+  c.innerHTML = "";
+  if (libTab === "list") renderLibList(c);
+  else if (libTab === "history") renderLibHistory(c);
+  else renderLibDownloads(c);
+  window.scrollTo(0, 0);
+}
+
+function libEmpty(c, title, body) {
+  var d = document.createElement("div");
+  d.className = "empty-state";
+  var h = document.createElement("h3"); h.textContent = title;
+  var p = document.createElement("p"); p.textContent = body;
+  d.appendChild(h); d.appendChild(p);
+  c.appendChild(d);
+}
+
+function renderLibList(c) {
+  var cont = getContinue();
+  var wl = getWatchlist();
+  if (!cont.length && !wl.length) { libEmpty(c, "Start your list", "Tap My List on any title to save it here. Anything you watch shows up under Continue watching."); return; }
+  if (cont.length) {
+    var t = document.createElement("div"); t.className = "lib-sec"; t.textContent = "Continue watching"; c.appendChild(t);
+    cont.forEach(function(item) {
+      var pct = item.duration > 0 ? (item.currentTime / item.duration * 100) : 0;
+      var sub = (item.episodeInfo ? item.episodeInfo + " \u00b7 " : "") + leftText(item);
+      c.appendChild(libRow(item, sub, pct, function() { libOpen(item); }, function() { libRemoveContinue(item.id); }));
+    });
+  }
+  if (wl.length) {
+    var t2 = document.createElement("div"); t2.className = "lib-sec"; t2.style.paddingTop = "18px"; t2.textContent = "My list"; c.appendChild(t2);
+    var grid = document.createElement("div"); grid.className = "poster-grid";
+    wl.forEach(function(meta) { grid.appendChild(createPosterCard(meta)); });
+    c.appendChild(grid);
+  }
+}
+
+function renderLibHistory(c) {
+  var h = getHistory();
+  if (!h.length) { libEmpty(c, "Nothing watched yet", "Titles you play will show up here."); return; }
+  var bar = document.createElement("div"); bar.className = "lib-actions";
+  var b = document.createElement("button"); b.className = "lib-action"; b.textContent = "Clear history"; b.onclick = clearHistory;
+  bar.appendChild(b); c.appendChild(bar);
+  h.forEach(function(item) {
+    var sub = (item.episodeInfo ? item.episodeInfo + " \u00b7 " : "") + timeAgo(item.timestamp);
+    c.appendChild(libRow(item, sub, -1, function() { libOpen(item); }, null));
+  });
+}
+
+function renderLibDownloads(c) {
+  var bar = document.createElement("div"); bar.className = "lib-actions";
+  bar.innerHTML = '<button class="lib-action" onclick="processDownloadQueue()">Start all</button><button class="lib-action" onclick="clearCompletedDownloads()">Clear done</button>';
+  c.appendChild(bar);
+  var list = document.createElement("div"); list.id = "libDownloadList";
+  c.appendChild(list);
+  renderDownloadList();
+}
+
+// ================================================================
+// PLAYER CONTROLS
+// ================================================================
+var pcHideTimer = null, pcTapTimer = null, pcLastTap = 0, pcDragging = false;
+var pcNextCancelled = false, pcIntroUsed = false, pcSeekTimers = {};
+var PC_RATES = [1, 1.25, 1.5, 2, 0.75];
+var PC_ICON_PLAY = '<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><polygon points="7,4 20,12 7,20"/></svg>';
+var PC_ICON_PAUSE = '<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
+
+function pcVideo() { return document.getElementById("videoPlayer"); }
+function pcOverlay() { return document.getElementById("pcOverlay"); }
+
+function pcSchedHide() {
+  if (pcHideTimer) clearTimeout(pcHideTimer);
+  pcHideTimer = setTimeout(function() {
+    var v = pcVideo();
+    if (v && !v.paused && !pcDragging) pcOverlay().classList.remove("show");
+  }, 3200);
+}
+function pcShow() { pcOverlay().classList.add("show"); pcSchedHide(); }
+
+function pcReset() {
+  pcNextCancelled = false; pcIntroUsed = false;
+  var n = document.getElementById("pcNext"); if (n) n.classList.remove("on");
+  var si = document.getElementById("pcSkipIntro"); if (si) si.classList.remove("on");
+  var sk = document.getElementById("pcSeek"); if (sk) { sk.value = 0; sk.style.setProperty("--pos", "0%"); sk.style.setProperty("--buf", "0%"); }
+  var cc = document.getElementById("pcCC"); if (cc) cc.style.display = "none";
+  pcShow();
+}
+
+function pcFlash(side) {
+  var el = document.getElementById(side === "L" ? "pcSeekL" : "pcSeekR");
+  el.classList.add("on");
+  if (pcSeekTimers[side]) clearTimeout(pcSeekTimers[side]);
+  pcSeekTimers[side] = setTimeout(function() { el.classList.remove("on"); }, 600);
+}
+
+function pcSkip(d) {
+  var v = pcVideo();
+  if (!v) return;
+  var dur = isFinite(v.duration) ? v.duration : Infinity;
+  try { v.currentTime = Math.max(0, Math.min(dur - 0.5, v.currentTime + d)); } catch (e) {}
+  pcFlash(d < 0 ? "L" : "R");
+  pcShow();
+}
+
+function pcTogglePlay() {
+  var v = pcVideo();
+  if (!v) return;
+  if (v.paused) v.play().catch(function() {}); else v.pause();
+  pcShow();
+}
+
+function pcSkipIntro() {
+  var v = pcVideo();
+  if (!v) return;
+  pcIntroUsed = true;
+  document.getElementById("pcSkipIntro").classList.remove("on");
+  var dur = isFinite(v.duration) ? v.duration : Infinity;
+  try { v.currentTime = Math.min(dur - 5, v.currentTime + 90); } catch (e) {}
+}
+
+function pcCancelNext() { pcNextCancelled = true; document.getElementById("pcNext").classList.remove("on"); }
+
+function pcCycleSpeed() {
+  var v = pcVideo();
+  var i = PC_RATES.indexOf(v.playbackRate);
+  var r = PC_RATES[(i + 1) % PC_RATES.length];
+  v.defaultPlaybackRate = r;
+  v.playbackRate = r;
+  document.getElementById("pcSpeed").textContent = r + "x";
+  pcShow();
+}
+
+function pcToggleCC() {
+  var v = pcVideo();
+  var tracks = v.textTracks;
+  if (!tracks || !tracks.length) return;
+  var on = tracks[0].mode === "showing";
+  for (var i = 0; i < tracks.length; i++) tracks[i].mode = on ? "disabled" : (i === 0 ? "showing" : "disabled");
+  document.getElementById("pcCC").classList.toggle("on", !on);
+  pcShow();
+}
+
+function pcFullscreen() {
+  var w = document.getElementById("playerVideoWrap");
+  if (document.fullscreenElement) { document.exitFullscreen(); return; }
+  if (w.requestFullscreen) w.requestFullscreen().catch(function() {});
+}
+
+function pcUpdateTime() {
+  var v = pcVideo();
+  var dur = isFinite(v.duration) ? v.duration : 0;
+  var cur = v.currentTime || 0;
+  var sk = document.getElementById("pcSeek");
+  if (!pcDragging && dur > 0) sk.value = Math.round(cur / dur * 1000);
+  sk.style.setProperty("--pos", (dur > 0 ? cur / dur * 100 : 0) + "%");
+  try {
+    var b = v.buffered;
+    var end = 0;
+    for (var i = 0; i < b.length; i++) { if (b.start(i) <= cur + 0.5 && b.end(i) > end) end = b.end(i); }
+    sk.style.setProperty("--buf", (dur > 0 ? end / dur * 100 : 0) + "%");
+  } catch (e) {}
+  document.getElementById("pcTime").textContent = fmtTime(cur) + " / " + fmtTime(dur);
+
+  var isEp = currentEpisodeIndex >= 0;
+  var si = document.getElementById("pcSkipIntro");
+  si.classList.toggle("on", isEp && !pcIntroUsed && cur > 8 && cur < 180);
+
+  var hasNext = isEp && currentEpisodeIndex < allEpisodes.length - 1;
+  var rem = dur - cur;
+  var nx = document.getElementById("pcNext");
+  if (hasNext && !pcNextCancelled && dur > 60 && rem > 0 && rem <= 12) {
+    document.getElementById("pcNextSec").textContent = Math.ceil(rem);
+    nx.classList.add("on");
+    si.classList.remove("on");
+  } else { nx.classList.remove("on"); }
+}
+
+function pcInit() {
+  var v = pcVideo();
+  if (!v || v._pcInit) return;
+  v._pcInit = true;
+  var zone = document.getElementById("pcZone");
+  var ov = pcOverlay();
+  var playBtn = document.getElementById("pcPlay");
+  playBtn.innerHTML = PC_ICON_PLAY;
+
+  zone.addEventListener("click", function(e) {
+    var r = zone.getBoundingClientRect();
+    var x = (e.clientX - r.left) / r.width;
+    var now = Date.now();
+    if (now - pcLastTap < 300 && (x < 0.4 || x > 0.6)) {
+      clearTimeout(pcTapTimer); pcLastTap = 0;
+      pcSkip(x < 0.5 ? -10 : 10);
+      return;
+    }
+    pcLastTap = now;
+    clearTimeout(pcTapTimer);
+    pcTapTimer = setTimeout(function() {
+      if (ov.classList.contains("show") && !v.paused) ov.classList.remove("show");
+      else pcShow();
+    }, 260);
+  });
+
+  var sk = document.getElementById("pcSeek");
+  sk.addEventListener("input", function() {
+    pcDragging = true;
+    var dur = isFinite(v.duration) ? v.duration : 0;
+    document.getElementById("pcTime").textContent = fmtTime(sk.value / 1000 * dur) + " / " + fmtTime(dur);
+    sk.style.setProperty("--pos", (sk.value / 10) + "%");
+    if (pcHideTimer) clearTimeout(pcHideTimer);
+  });
+  sk.addEventListener("change", function() {
+    var dur = isFinite(v.duration) ? v.duration : 0;
+    if (dur > 0) { try { v.currentTime = sk.value / 1000 * dur; } catch (e) {} }
+    pcDragging = false;
+    pcSchedHide();
+  });
+
+  v.addEventListener("play", function() { playBtn.innerHTML = PC_ICON_PAUSE; pcSchedHide(); });
+  v.addEventListener("pause", function() { playBtn.innerHTML = PC_ICON_PLAY; ov.classList.add("show"); });
+  v.addEventListener("ended", function() { playBtn.innerHTML = PC_ICON_PLAY; ov.classList.add("show"); });
+  v.addEventListener("timeupdate", pcUpdateTime);
+  v.addEventListener("progress", pcUpdateTime);
+  v.addEventListener("waiting", function() { document.getElementById("pcSpin").classList.add("on"); });
+  v.addEventListener("playing", function() { document.getElementById("pcSpin").classList.remove("on"); });
+  v.addEventListener("canplay", function() { document.getElementById("pcSpin").classList.remove("on"); });
+  v.addEventListener("loadstart", function() { document.getElementById("pcSpin").classList.add("on"); });
+  v.addEventListener("loadedmetadata", function() {
+    var has = v.textTracks && v.textTracks.length > 0;
+    document.getElementById("pcCC").style.display = has ? "" : "none";
+    pcUpdateTime();
+  });
+
+  if (!window.OmegaDL && document.getElementById("playerVideoWrap").requestFullscreen) document.getElementById("pcFs").style.display = "";
+
+  document.addEventListener("keydown", function(e) {
+    if (document.getElementById("playerPage").style.display !== "flex") return;
+    var tag = (e.target && e.target.tagName || "").toLowerCase();
+    if (tag === "textarea" || (tag === "input" && e.target.id !== "pcSeek")) return;
+    if (e.key === " " || e.key === "k") { e.preventDefault(); pcTogglePlay(); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); pcSkip(-10); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); pcSkip(10); }
+    else if (e.key === "f") pcFullscreen();
+  });
+}
+
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator) || location.protocol === "file:") return;
   window.addEventListener("load", function() {
@@ -2376,6 +2855,7 @@ function registerServiceWorker() {
 
 function init() {
   registerServiceWorker();
+  pcInit();
   renderCategoryTabs();
   loadHome();
   renderDownloadList();
