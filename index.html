@@ -831,8 +831,8 @@ var selectedEpDownload = {};
 // --- SYSTEM DOWNLOAD: Triggers Android DownloadManager ---
 // Flow: JS calls window.OmegaDL.download(url, name) (JS bridge in MainActivity) ->
 // Java enqueues via DownloadManager -> saves to Downloads with notification progress
-function triggerSystemDownload(rawUrl, fileName) {
-  var dlUrl = getDownloadableUrl(rawUrl);
+function triggerSystemDownload(rawUrl, fileName, overrideUrl) {
+  var dlUrl = overrideUrl || getDownloadableUrl(rawUrl);
   if (!dlUrl) return false;
 
   if (!(window.OmegaDL && typeof window.OmegaDL.download === "function")) return false;
@@ -936,6 +936,16 @@ function downloadFileBrowser(url, fileName, onProgress) {
   });
 }
 
+// --- SMART DOWNLOAD: worker re-creates the stream link and downloads it in ONE request.
+// Needed because stream links are locked to the IP that created them (ip-mismatch).
+function buildSmartDownloadUrl(item) {
+  if (!item) return null;
+  var api = item.apiUrl;
+  if (!api && item.type === "episode" && item.seriesId) api = API_BASE + "/stream/series/" + item.seriesId + ":" + item.season + ":" + item.episode + ".json";
+  if (!api) return null;
+  return WORKER_BASE + "/dl?api=" + encodeURIComponent(api) + "&vj=" + encodeURIComponent(item.vjName || "") + "&sig=" + encodeURIComponent(item.sig || "") + "&name=" + encodeURIComponent(item.fileName || "video.mp4");
+}
+
 // --- NATIVE FALLBACK: plain navigation download (no Origin header, unlike fetch) ---
 function openNativeDownload(dlUrl, fileName) {
   var u = dlUrl;
@@ -964,6 +974,7 @@ function addToDownloadQueue(dlItem, fileName) {
     seriesId: dlItem.seriesId || null,
     season: dlItem.season || 0, episode: dlItem.episode || 0,
     vjName: dlItem.vjName || "",
+    apiUrl: dlItem.apiUrl || "", sig: dlItem.sig || "",
     status: "queued", progress: 0, receivedBytes: 0, totalBytes: 0,
     errorMsg: "", saveLocation: "Downloads/" + fileName
   });
@@ -1013,6 +1024,9 @@ function processDownloadQueue() {
       return;
     }
 
+    var smartUrl = buildSmartDownloadUrl(nextItem);
+    if (smartUrl) dlUrl = smartUrl;
+
     // Show save location BEFORE download starts
     var saveLoc = "Downloads/" + nextItem.fileName;
     nextItem.status = "downloading";
@@ -1024,7 +1038,7 @@ function processDownloadQueue() {
       // ANDROID APP: native DownloadManager via OmegaDL bridge
       // It will ask where to save FIRST, then download with notification progress
       console.log("[Download] System download:", dlUrl.substring(0, 120));
-      var triggered = triggerSystemDownload(rawUrl, nextItem.fileName);
+      var triggered = triggerSystemDownload(rawUrl, nextItem.fileName, smartUrl);
 
       if (triggered) {
         nextItem.status = "done";
@@ -1259,7 +1273,16 @@ function downloadCurrent() {
     fname += "_" + vjGroups[selectedVJIndex].name;
   }
   fname = sanitizeFilename(fname) + ".mp4";
-  addToDownloadQueue({ itemId: currentDetail ? currentDetail.id + "_play_" + Date.now() : "dl_" + Date.now(), type: "direct", directUrl: dlUrl, vjName: vjGroups.length > 0 && vjGroups[selectedVJIndex] ? vjGroups[selectedVJIndex].name : "" }, fname);
+  var smartApi = "";
+  if (currentDetail) {
+    if (currentEpisodeIndex >= 0 && currentEpisodeIndex < allEpisodes.length) {
+      var sep = allEpisodes[currentEpisodeIndex];
+      smartApi = API_BASE + "/stream/series/" + currentDetail.id + ":" + sep.season + ":" + sep.number + ".json";
+    } else {
+      smartApi = API_BASE + "/stream/" + (currentDetail.type || "movie") + "/" + currentDetail.id + ".json";
+    }
+  }
+  addToDownloadQueue({ itemId: currentDetail ? currentDetail.id + "_play_" + Date.now() : "dl_" + Date.now(), type: "direct", directUrl: dlUrl, apiUrl: smartApi, sig: String(stream.name || stream.title || ""), vjName: vjGroups.length > 0 && vjGroups[selectedVJIndex] ? vjGroups[selectedVJIndex].name : "" }, fname);
   if (!document.getElementById("downloadPanel").classList.contains("show")) toggleDownloadPanel();
   processDownloadQueue();
 }
