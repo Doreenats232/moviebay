@@ -237,6 +237,7 @@ input{outline:none;font-family:inherit}
 .dl-item-info{flex:1;min-width:0}
 .dl-item-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dl-item-status{font-size:11px;color:var(--text-3);margin-top:3px;display:flex;justify-content:space-between}
+.dl-item-location{font-size:10px;color:var(--primary);margin-top:3px;font-weight:600;opacity:0.8}
 .dl-progress-wrap{width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:6px;overflow:hidden}
 .dl-progress-fill{height:100%;background:var(--primary);border-radius:2px;transition:width 0.3s}
 .dl-item.done .dl-progress-fill{background:var(--primary)}
@@ -258,7 +259,6 @@ input{outline:none;font-family:inherit}
 .watchlist-active{background:rgba(255,71,87,0.15)!important;border-color:rgba(255,71,87,0.3)!important;color:var(--error)!important}
 .home-content{padding-bottom:100px}
 .page-enter{animation:fadeInUp 0.3s ease}
-/* VJ Selection Styles */
 .vj-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .vj-chip{padding:9px 20px;border:1px solid rgba(255,255,255,0.12);border-radius:var(--radius-pill);background:rgba(255,255,255,0.06);color:var(--text-2);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.25s cubic-bezier(0.4,0,0.2,1);white-space:nowrap;display:flex;align-items:center;gap:6px}
 .vj-chip.active{background:var(--primary);color:#000;box-shadow:0 4px 16px rgba(0,220,130,0.3);border-color:var(--primary)}
@@ -276,7 +276,8 @@ input{outline:none;font-family:inherit}
 .player-vj-chip.active{background:var(--primary);color:#000;border-color:var(--primary);box-shadow:0 2px 10px rgba(0,220,130,0.25)}
 .player-vj-chip:active{transform:scale(0.95)}
 .stream-option .vj-label{font-size:10px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px}
-.dl-content-type-warning{font-size:11px;color:var(--warning);margin-top:4px;font-weight:600}
+.dl-save-hint{font-size:10px;color:var(--primary);margin-top:4px;font-weight:700;display:flex;align-items:center;gap:4px}
+.dl-save-hint::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--primary)}
 @media(min-width:768px){.poster-scroll{gap:16px}.poster-card{width:150px}.hero-carousel{height:520px}.hero-title{font-size:32px}.detail-hero{height:500px}.detail-title-text{font-size:32px}}
 @media(min-width:1024px){.poster-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}}
 @media(min-width:1200px){.poster-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}}
@@ -293,7 +294,6 @@ input{outline:none;font-family:inherit}
   <p>Loading your entertainment...</p>
 </div>
 
-<!-- HOME PAGE -->
 <div id="homePage">
   <div class="header">
     <div class="header-logo">Omega<span>Stream</span></div>
@@ -314,7 +314,6 @@ input{outline:none;font-family:inherit}
   <div class="home-content" id="homeContent"></div>
 </div>
 
-<!-- DETAIL PAGE -->
 <div id="detailPage">
   <div class="detail-hero">
     <div class="detail-top-btns">
@@ -340,7 +339,6 @@ input{outline:none;font-family:inherit}
   </div>
 </div>
 
-<!-- PLAYER PAGE -->
 <div id="playerPage">
   <div class="player-video-wrap" id="playerVideoWrap">
     <div class="player-video-topbar">
@@ -384,7 +382,6 @@ input{outline:none;font-family:inherit}
   </div>
 </div>
 
-<!-- DOWNLOAD FAB + PANEL -->
 <button id="downloadFab" onclick="toggleDownloadPanel()">
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
   <div class="dl-badge" id="downloadBadge" style="display:none">0</div>
@@ -402,7 +399,6 @@ input{outline:none;font-family:inherit}
   </div>
 </div>
 
-<!-- TRAILER MODAL -->
 <div id="trailerModal">
   <button class="trailer-close" onclick="closeTrailer()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
   <div class="trailer-content"><iframe id="trailerIframe" src="" allowfullscreen allow="autoplay; encrypted-media"></iframe></div>
@@ -418,7 +414,15 @@ var VIDEO_PROXY = WORKER_BASE + "/video?url=";
 var API_BASE = "https://s-u.in";
 
 // ================================================================
-// CATEGORY TABS (TYPE + GENRE)
+// PLATFORM DETECTION
+// ================================================================
+function isAndroidApp() {
+  var ua = navigator.userAgent || "";
+  return ua.indexOf("wv") !== -1 || ua.indexOf("OmegaStream") !== -1 || ua.indexOf("Android") !== -1;
+}
+
+// ================================================================
+// CATEGORY TABS
 // ================================================================
 var CATEGORY_TABS = [
   { id: "all", name: "All" },
@@ -554,7 +558,6 @@ var currentSeason = 1;
 var searchTimeout = null;
 var saveInterval = null;
 
-// VJ Selection State
 var vjGroups = [];
 var selectedVJIndex = 0;
 
@@ -576,7 +579,7 @@ function addToGlobalPool(items) {
 }
 
 // ================================================================
-// VJ NAME EXTRACTION & GROUPING
+// VJ EXTRACTION AND GROUPING
 // ================================================================
 function extractVJName(stream) {
   if (stream.vj && String(stream.vj).trim()) return String(stream.vj).trim();
@@ -626,12 +629,8 @@ function getBestStreamForVJ(vjGroup) {
   for (var i = 0; i < vjGroup.streams.length; i++) {
     var s = vjGroup.streams[i];
     var name = String(s.name || s.title || "").toLowerCase();
-    if (name.indexOf("1080") !== -1 || name.indexOf("fhd") !== -1) {
-      best = s; bestIdx = vjGroup.globalIndices[i]; break;
-    }
-    if (name.indexOf("720") !== -1 || name.indexOf("hd") !== -1) {
-      best = s; bestIdx = vjGroup.globalIndices[i];
-    }
+    if (name.indexOf("1080") !== -1 || name.indexOf("fhd") !== -1) { best = s; bestIdx = vjGroup.globalIndices[i]; break; }
+    if (name.indexOf("720") !== -1 || name.indexOf("hd") !== -1) { best = s; bestIdx = vjGroup.globalIndices[i]; }
   }
   return { stream: best, globalIndex: bestIdx };
 }
@@ -709,13 +708,53 @@ function startSaveInterval() {
 function stopSaveInterval() { if (saveInterval) { clearInterval(saveInterval); saveInterval = null; } }
 
 // ================================================================
-// DOWNLOAD MANAGER - FIXED REAL DOWNLOADS
+// FORMAT BYTES
+// ================================================================
+function formatBytes(bytes) {
+  if (!bytes) return "0 B";
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+  if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + " MB";
+  return (bytes / 1073741824).toFixed(2) + " GB";
+}
+
+// ================================================================
+// DOWNLOAD MANAGER - SYSTEM DOWNLOAD FOR ANDROID
 // ================================================================
 var downloadQueue = [];
 var isProcessingQueue = false;
 var selectedEpDownload = {};
 
-function saveBlob(blob, fileName) {
+// --- SYSTEM DOWNLOAD: Triggers Android DownloadManager ---
+// Flow: JS creates hidden iframe -> WebView intercepts URL with "dl=1" ->
+// Java shouldOverrideUrlLoading catches it -> Java enqueues via DownloadManager ->
+// System shows save location prompt FIRST -> Downloads with notification progress
+function triggerSystemDownload(rawUrl, fileName) {
+  var dlUrl = getDownloadableUrl(rawUrl);
+  if (!dlUrl) return false;
+
+  // Build system download URL with special parameters Java can intercept
+  var sysUrl = dlUrl;
+  if (sysUrl.indexOf(WORKER_BASE) === 0) {
+    sysUrl += (sysUrl.indexOf("?") !== -1 ? "&" : "?") + "dl=1&fn=" + encodeURIComponent(fileName);
+  }
+
+  // Create hidden iframe to trigger the download URL
+  var iframe = document.createElement("iframe");
+  iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;border:none;";
+  iframe.src = sysUrl;
+  document.body.appendChild(iframe);
+
+  // Clean up iframe after delay
+  setTimeout(function() {
+    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+  }, 120000);
+
+  return true;
+}
+
+// --- BROWSER DOWNLOAD: fetch + blob for web browsers ---
+function saveBlobToDownloads(blob, fileName) {
   try {
     var blobUrl = URL.createObjectURL(blob);
     var a = document.createElement("a");
@@ -731,49 +770,30 @@ function saveBlob(blob, fileName) {
     return true;
   } catch(e) {
     try {
-      var blobUrl2 = URL.createObjectURL(blob);
-      window.open(blobUrl2, "_blank");
-      setTimeout(function() { URL.revokeObjectURL(blobUrl2); }, 300000);
+      var bu = URL.createObjectURL(blob);
+      window.open(bu, "_blank");
+      setTimeout(function() { URL.revokeObjectURL(bu); }, 300000);
       return true;
     } catch(e2) {
-      try {
-        var reader = new FileReader();
-        reader.onloadend = function() {
-          var a2 = document.createElement("a");
-          a2.href = reader.result;
-          a2.download = fileName;
-          a2.style.display = "none";
-          document.body.appendChild(a2);
-          a2.click();
-          setTimeout(function() { if (a2.parentNode) a2.parentNode.removeChild(a2); }, 5000);
-        };
-        reader.readAsDataURL(blob);
-        return true;
-      } catch(e3) {
-        return false;
-      }
+      return false;
     }
   }
 }
 
-function downloadFile(url, fileName, onProgress) {
+function downloadFileBrowser(url, fileName, onProgress) {
   return new Promise(function(resolve, reject) {
     fetch(url).then(function(response) {
       if (!response.ok) {
-        reject(new Error("Server returned " + response.status + " " + response.statusText));
+        reject(new Error("Server returned " + response.status));
         return;
       }
       var contentType = (response.headers.get("Content-Type") || "").toLowerCase();
       if (contentType.indexOf("text/html") !== -1) {
-        reject(new Error("Server returned HTML error page instead of video. Try another stream."));
+        reject(new Error("Got HTML error page. Stream may be expired."));
         return;
       }
-      if (contentType.indexOf("application/vnd.apple.mpegurl") !== -1 || contentType.indexOf("application/x-mpegurl") !== -1) {
-        reject(new Error("HLS playlist received. Cannot download HLS streams - pick an MP4 stream."));
-        return;
-      }
-      if (contentType.indexOf("text/plain") !== -1 || contentType.indexOf("application/json") !== -1) {
-        reject(new Error("Server returned text/JSON instead of video. Stream URL may be invalid."));
+      if (contentType.indexOf("mpegurl") !== -1) {
+        reject(new Error("HLS stream cannot be downloaded. Pick MP4."));
         return;
       }
       var contentLength = response.headers.get("Content-Length");
@@ -781,31 +801,8 @@ function downloadFile(url, fileName, onProgress) {
 
       if (!response.body || typeof response.body.getReader !== "function") {
         response.blob().then(function(blob) {
-          if (!blob || blob.size === 0) {
-            reject(new Error("Downloaded file is empty (0 bytes). Server may have blocked the request."));
-            return;
-          }
-          if (blob.size < 10240) {
-            var reader = new FileReader();
-            reader.onloadend = function() {
-              var text = String(reader.result || "").substring(0, 500).toLowerCase();
-              if (text.indexOf("<html") !== -1 || text.indexOf("<!doctype") !== -1) {
-                reject(new Error("Got HTML error page instead of video file (" + blob.size + " bytes)."));
-                return;
-              }
-              if (!saveBlob(blob, fileName)) {
-                reject(new Error("Could not save file. Try downloading from browser instead."));
-                return;
-              }
-              resolve({ size: blob.size });
-            };
-            reader.readAsText(blob);
-            return;
-          }
-          if (!saveBlob(blob, fileName)) {
-            reject(new Error("Could not save file. Try downloading from browser instead."));
-            return;
-          }
+          if (!blob || blob.size === 0) { reject(new Error("Empty file received.")); return; }
+          if (!saveBlobToDownloads(blob, fileName)) { reject(new Error("Could not save file.")); return; }
           resolve({ size: blob.size });
         }).catch(reject);
         return;
@@ -814,28 +811,14 @@ function downloadFile(url, fileName, onProgress) {
       var reader = response.body.getReader();
       var chunks = [];
       var receivedBytes = 0;
-
       function pump() {
         return reader.read().then(function(result) {
           if (result.done) {
-            if (receivedBytes === 0) {
-              reject(new Error("No data received from server (0 bytes). URL may be expired."));
-              return;
-            }
-            if (receivedBytes < 10240) {
-              reject(new Error("File too small (" + formatBytes(receivedBytes) + "). Likely an error, not a video."));
-              return;
-            }
+            if (receivedBytes === 0) { reject(new Error("No data received.")); return; }
             var blob = new Blob(chunks);
-            if (!blob || blob.size === 0) {
-              reject(new Error("Assembled file is empty. Download failed."));
-              return;
-            }
-            if (!saveBlob(blob, fileName)) {
-              reject(new Error("Could not save file. Try long-pressing the download link."));
-              return;
-            }
-            resolve({ size: blob.size, contentType: contentType });
+            if (!blob || blob.size === 0) { reject(new Error("File is empty.")); return; }
+            if (!saveBlobToDownloads(blob, fileName)) { reject(new Error("Could not save file.")); return; }
+            resolve({ size: blob.size });
             return;
           }
           chunks.push(result.value);
@@ -850,14 +833,13 @@ function downloadFile(url, fileName, onProgress) {
       return pump();
     }).catch(function(err) {
       if (err.message && err.message.indexOf("Failed to fetch") !== -1) {
-        reject(new Error("Network error - check your internet connection or try again."));
-      } else {
-        reject(err);
-      }
+        reject(new Error("Network error. Check your connection."));
+      } else { reject(err); }
     });
   });
 }
 
+// --- QUEUE MANAGEMENT ---
 function addToDownloadQueue(dlItem, fileName) {
   var id = dlItem.itemId || ("dl_" + Date.now());
   for (var i = 0; i < downloadQueue.length; i++) {
@@ -873,7 +855,8 @@ function addToDownloadQueue(dlItem, fileName) {
     seriesId: dlItem.seriesId || null,
     season: dlItem.season || 0, episode: dlItem.episode || 0,
     vjName: dlItem.vjName || "",
-    status: "queued", progress: 0, receivedBytes: 0, totalBytes: 0, errorMsg: ""
+    status: "queued", progress: 0, receivedBytes: 0, totalBytes: 0,
+    errorMsg: "", saveLocation: "Downloads/" + fileName
   });
   updateDownloadBadge();
   renderDownloadList();
@@ -905,35 +888,71 @@ function processDownloadQueue() {
   }
   if (!nextItem) { isProcessingQueue = false; updateDownloadBadge(); return; }
   isProcessingQueue = true;
-  nextItem.status = "downloading";
-  renderDownloadList();
-  updateDownloadBadge();
 
   function doDownload(rawUrl) {
     if (!rawUrl) {
       nextItem.status = "error";
-      nextItem.errorMsg = "No downloadable URL (HLS-only stream). Try another stream.";
+      nextItem.errorMsg = "No downloadable URL (HLS-only).";
       renderDownloadList(); isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue();
       return;
     }
-    var resolvedUrl = getDownloadableUrl(rawUrl);
-    if (!resolvedUrl) {
+    var dlUrl = getDownloadableUrl(rawUrl);
+    if (!dlUrl) {
       nextItem.status = "error";
-      nextItem.errorMsg = "HLS streams cannot be downloaded. Pick an MP4 version.";
+      nextItem.errorMsg = "HLS cannot be downloaded. Pick MP4 stream.";
       renderDownloadList(); isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue();
       return;
     }
-    console.log("[Download] Resolved:", resolvedUrl.substring(0, 120));
-    downloadFile(resolvedUrl, nextItem.fileName, function(pct, received, total) {
-      nextItem.progress = pct; nextItem.receivedBytes = received; nextItem.totalBytes = total;
+
+    // Show save location BEFORE download starts
+    var saveLoc = "Downloads/" + nextItem.fileName;
+    nextItem.status = "downloading";
+    nextItem.saveLocation = saveLoc;
+    nextItem.message = "Preparing...";
+    renderDownloadList();
+
+    if (isAndroidApp()) {
+      // ANDROID: System DownloadManager handles everything
+      // It will ask where to save FIRST, then download with notification progress
+      console.log("[Download] System download:", dlUrl.substring(0, 120));
+      var triggered = triggerSystemDownload(rawUrl, nextItem.fileName);
+
+      if (triggered) {
+        nextItem.status = "done";
+        nextItem.progress = 100;
+        nextItem.message = "Saving to " + saveLoc + " - check notifications";
+        renderDownloadList();
+        showToast("Download started! Saving to " + saveLoc, "success");
+        isProcessingQueue = false;
+        updateDownloadBadge();
+        processDownloadQueue();
+      } else {
+        // Fallback to browser download
+        doBrowserDownload(dlUrl);
+      }
+    } else {
+      // BROWSER: JS fetch + blob with progress
+      doBrowserDownload(dlUrl);
+    }
+  }
+
+  function doBrowserDownload(dlUrl) {
+    nextItem.status = "downloading";
+    renderDownloadList();
+    downloadFileBrowser(dlUrl, nextItem.fileName, function(pct, received, total) {
+      nextItem.progress = pct;
+      nextItem.receivedBytes = received;
+      nextItem.totalBytes = total;
+      nextItem.message = "Downloading " + pct.toFixed(1) + "%";
       renderDownloadList();
     }).then(function(result) {
       nextItem.status = "done";
       nextItem.progress = 100;
       nextItem.receivedBytes = result.size;
       nextItem.totalBytes = result.size;
+      nextItem.message = "Saved to " + (nextItem.saveLocation || "Downloads/");
       renderDownloadList();
-      showToast(nextItem.fileName + " saved successfully! (" + formatBytes(result.size) + ")", "success");
+      showToast("Downloaded! " + formatBytes(result.size) + " saved to " + (nextItem.saveLocation || "Downloads/"), "success");
       isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue();
     }).catch(function(err) {
       console.log("[Download] Error:", err.message);
@@ -945,6 +964,7 @@ function processDownloadQueue() {
     });
   }
 
+  // Get the raw URL
   if (nextItem.directUrl) {
     doDownload(nextItem.directUrl);
   } else if (nextItem.type === "episode" && nextItem.seriesId) {
@@ -954,15 +974,13 @@ function processDownloadQueue() {
       hideStatus();
       var streams = data && data.streams ? data.streams : [];
       if (!streams.length) {
-        nextItem.status = "error"; nextItem.errorMsg = "No streams found for this episode";
+        nextItem.status = "error"; nextItem.errorMsg = "No streams for this episode";
         renderDownloadList(); isProcessingQueue = false; processDownloadQueue(); return;
       }
       var bestUrl = null;
       if (nextItem.vjName) {
         for (var s = 0; s < streams.length; s++) {
-          if (extractVJName(streams[s]) === nextItem.vjName) {
-            bestUrl = getBestDownloadUrl(streams[s]); break;
-          }
+          if (extractVJName(streams[s]) === nextItem.vjName) { bestUrl = getBestDownloadUrl(streams[s]); break; }
         }
       }
       if (!bestUrl) bestUrl = getBestDownloadUrl(streams[0]);
@@ -972,7 +990,7 @@ function processDownloadQueue() {
       renderDownloadList(); isProcessingQueue = false; processDownloadQueue();
     });
   } else {
-    nextItem.status = "error"; nextItem.errorMsg = "No download URL available";
+    nextItem.status = "error"; nextItem.errorMsg = "No download URL";
     renderDownloadList(); isProcessingQueue = false; processDownloadQueue();
   }
 }
@@ -991,14 +1009,6 @@ function updateDownloadBadge() {
   } else { fab.classList.remove("show"); badge.style.display = "none"; }
 }
 
-function formatBytes(bytes) {
-  if (!bytes) return "0 B";
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
-  if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + " MB";
-  return (bytes / 1073741824).toFixed(2) + " GB";
-}
-
 function renderDownloadList() {
   var container = document.getElementById("downloadList");
   if (!container) return;
@@ -1009,11 +1019,11 @@ function renderDownloadList() {
     var statusText = ""; var iconClass = item.status; var iconChar = "";
     if (item.status === "queued") { statusText = "Waiting"; iconChar = "&#8987;"; }
     else if (item.status === "downloading") {
-      statusText = "Downloading " + (item.progress || 0).toFixed(1) + "%";
+      statusText = item.message || ("Downloading " + (item.progress || 0).toFixed(1) + "%");
       iconChar = "&#8595;";
     }
     else if (item.status === "done") {
-      statusText = "Saved! " + formatBytes(item.receivedBytes || item.totalBytes || 0);
+      statusText = item.message || "Done";
       iconChar = "&#10003;";
     }
     else {
@@ -1023,10 +1033,12 @@ function renderDownloadList() {
     var byteInfo = "";
     if (item.status === "downloading" && item.totalBytes > 0) {
       byteInfo = '<span>' + formatBytes(item.receivedBytes) + " / " + formatBytes(item.totalBytes) + '</span>';
-    } else if (item.status === "downloading" && item.receivedBytes > 0) {
-      byteInfo = '<span>' + formatBytes(item.receivedBytes) + '</span>';
     }
-    html += '<div class="dl-item ' + item.status + '"><div class="dl-item-status-icon ' + iconClass + '">' + iconChar + '</div><div class="dl-item-info"><div class="dl-item-name">' + item.fileName + '</div><div class="dl-item-status"><span>' + statusText + '</span>' + byteInfo + '</div><div class="dl-progress-wrap"><div class="dl-progress-fill" style="width:' + (item.progress || 0) + '%"></div></div>' + (item.status === "error" && item.errorMsg ? '<div class="dl-content-type-warning">' + item.errorMsg + '</div>' : '') + '</div></div>';
+    var locationHtml = "";
+    if (item.saveLocation && item.status !== "queued") {
+      locationHtml = '<div class="dl-save-hint">' + item.saveLocation + '</div>';
+    }
+    html += '<div class="dl-item ' + item.status + '"><div class="dl-item-status-icon ' + iconClass + '">' + iconChar + '</div><div class="dl-item-info"><div class="dl-item-name">' + item.fileName + '</div><div class="dl-item-status"><span>' + statusText + '</span>' + byteInfo + '</div>' + locationHtml + '<div class="dl-progress-wrap"><div class="dl-progress-fill" style="width:' + (item.progress || 0) + '%"></div></div></div></div>';
   }
   container.innerHTML = html;
 }
@@ -1091,7 +1103,7 @@ function downloadSelectedEpisodes() {
     selectedEpDownload = {}; renderPlayerEpisodes(); updateBatchDownloadBar();
     if (!document.getElementById("downloadPanel").classList.contains("show")) toggleDownloadPanel();
     processDownloadQueue();
-    showToast("Queued " + count + " episodes for download", "success");
+    showToast("Queued " + count + " episodes", "success");
   } else { showToast("Select episodes first", "info"); }
 }
 
@@ -1114,7 +1126,7 @@ function downloadCurrent() {
   var stream = currentStreams[currentSelectedStream] || currentStreams[0];
   var dlUrl = getBestDownloadUrl(stream);
   if (!dlUrl) {
-    showToast("This is an HLS stream - cannot download. Pick a different stream/VJ with MP4.", "error");
+    showToast("HLS stream - cannot download. Pick MP4 version.", "error");
     return;
   }
   var fname = (currentDetail && currentDetail.name ? currentDetail.name : "video");
@@ -1333,11 +1345,8 @@ function onSearchInput(query) {
       ]).then(function(results) {
         var items = [];
         results.forEach(function(r) { if (r && r.metas) items = items.concat(r.metas); });
-        if (items.length > 0) {
-          renderSuggestions(fuzzySearch(items, query, 8), query);
-        } else {
-          renderSuggestions([], query);
-        }
+        if (items.length > 0) renderSuggestions(fuzzySearch(items, query, 8), query);
+        else renderSuggestions([], query);
       });
     }
   }, 150);
@@ -1389,9 +1398,7 @@ function onSearchSubmit(query) {
         if (!resultIds[m.id]) { resultIds[m.id] = true; allResults.push(m); }
       });
     });
-    if (!allResults.length) {
-      allResults = fuzzySearch(globalAllItems, query, 20);
-    }
+    if (!allResults.length) allResults = fuzzySearch(globalAllItems, query, 20);
     renderSearchResults(allResults, query);
   }).catch(function() {
     hideStatus();
@@ -1417,7 +1424,7 @@ function renderSearchResults(metas, query) {
 }
 
 // ================================================================
-// CATEGORY TABS (GENRE + TYPE)
+// CATEGORY TABS
 // ================================================================
 function renderCategoryTabs() {
   var container = document.getElementById("categoryTabs");
@@ -1440,29 +1447,20 @@ function renderCategoryTabs() {
 function selectCategory(catId) {
   currentCategoryFilter = catId;
   renderCategoryTabs();
-  if (catId === "all") {
-    resetDedup();
-    loadHome();
-    return;
-  }
+  if (catId === "all") { resetDedup(); loadHome(); return; }
   var cat = null;
   for (var i = 0; i < CATEGORY_TABS.length; i++) { if (CATEGORY_TABS[i].id === catId) { cat = CATEGORY_TABS[i]; break; } }
   if (!cat) return;
   var content = document.getElementById("homeContent");
   content.innerHTML = '<div class="load-sentinel"><div class="spinner"></div></div>';
-  if (cat.typeFilter) {
-    loadTypeFiltered(cat);
-  } else {
-    loadGenreFiltered(cat);
-  }
+  if (cat.typeFilter) loadTypeFiltered(cat);
+  else loadGenreFiltered(cat);
 }
 
 function loadTypeFiltered(cat) {
   var content = document.getElementById("homeContent");
   var type = cat.typeFilter;
-  var localItems = globalAllItems.filter(function(item) {
-    return (item.type || "movie") === type;
-  });
+  var localItems = globalAllItems.filter(function(item) { return (item.type || "movie") === type; });
   var catalogId = type === "movie" ? "moviebay-all-movies" : "moviebay-all-series";
   var url = PROXY_URL + encodeURIComponent(API_BASE + "/catalog/" + type + "/" + catalogId + ".json");
   fetchJson(url).then(function(data) {
@@ -1474,15 +1472,11 @@ function loadTypeFiltered(cat) {
     localItems.forEach(function(item) { if (!seenIds[item.id]) { seenIds[item.id] = true; merged.push(item); } });
     metas.forEach(function(m) { if (!seenIds[m.id]) { seenIds[m.id] = true; merged.push(m); } });
     renderFilteredGrid(merged, cat.name);
-  }).catch(function() {
-    renderFilteredGrid(localItems, cat.name);
-  });
+  }).catch(function() { renderFilteredGrid(localItems, cat.name); });
 }
 
 function loadGenreFiltered(cat) {
-  var localItems = globalAllItems.filter(function(item) {
-    return itemMatchesCategory(item, cat);
-  });
+  var localItems = globalAllItems.filter(function(item) { return itemMatchesCategory(item, cat); });
   var searchTerms = cat.searchTerms || cat.genres || [cat.name.toLowerCase()];
   var allSearchPromises = [];
   searchTerms.forEach(function(term) {
@@ -1495,17 +1489,11 @@ function loadGenreFiltered(cat) {
     localItems.forEach(function(item) { if (!seenIds[item.id]) { seenIds[item.id] = true; merged.push(item); } });
     results.forEach(function(r) {
       if (r && r.metas) r.metas.forEach(function(m) {
-        if (!seenIds[m.id]) {
-          seenIds[m.id] = true;
-          if (!m.type) m.type = "movie";
-          merged.push(m);
-        }
+        if (!seenIds[m.id]) { seenIds[m.id] = true; if (!m.type) m.type = "movie"; merged.push(m); }
       });
     });
     renderFilteredGrid(merged, cat.name);
-  }).catch(function() {
-    renderFilteredGrid(localItems, cat.name);
-  });
+  }).catch(function() { renderFilteredGrid(localItems, cat.name); });
 }
 
 function getItemGenres(item) {
@@ -1798,13 +1786,8 @@ function renderStreamSelector() {
     document.getElementById("detailPlayBtn").style.display = "none";
     return;
   }
-  if (currentStreams.length === 1) {
-    container.innerHTML = "";
-    return;
-  }
-
+  if (currentStreams.length === 1) { container.innerHTML = ""; return; }
   var html = "";
-
   if (vjGroups.length > 1) {
     html += '<div class="vj-section-title">Choose VJ / Audio Version</div>';
     html += '<div class="vj-chips">';
@@ -1812,32 +1795,24 @@ function renderStreamSelector() {
       html += '<button class="vj-chip' + (i === selectedVJIndex ? ' active' : '') + '" onclick="selectVJOption(' + i + ')">' + g.name + '<span class="vj-chip-count">' + g.streams.length + '</span></button>';
     });
     html += '</div>';
-  }
-
-  html += '<div class="sub-section-title">Choose Stream</div>';
-
-  if (vjGroups.length > 1) {
     var activeGroup = vjGroups[selectedVJIndex];
     if (activeGroup) {
+      html += '<div class="sub-section-title">Streams (' + activeGroup.name + ')</div>';
       activeGroup.streams.forEach(function(s, idx) {
         var globalIdx = activeGroup.globalIndices[idx];
         html += '<div class="stream-option' + (globalIdx === currentSelectedStream ? ' active' : '') + '" onclick="selectStream(' + globalIdx + ')"><div class="stream-icon-wrap">' + (s.isFast ? '&#9889;' : '&#127909;') + '</div><div class="stream-info"><div class="stream-name">' + (s.name || s.sourceName || "Stream " + (globalIdx + 1)) + '</div><div class="stream-sub">' + (s.subtitle || s.server || "") + '</div><div class="vj-label">VJ: ' + activeGroup.name + '</div></div><div class="stream-speed ' + (s.isFast ? "fast" : "normal") + '">' + (s.isFast ? "Fast" : "Normal") + '</div></div>';
       });
     }
   } else {
+    html += '<div class="sub-section-title">Choose Stream</div>';
     currentStreams.forEach(function(s, idx) {
-      var vjLabel = extractVJName(s);
       html += '<div class="stream-option' + (idx === currentSelectedStream ? ' active' : '') + '" onclick="selectStream(' + idx + ')"><div class="stream-icon-wrap">' + (s.isFast ? '&#9889;' : '&#127909;') + '</div><div class="stream-info"><div class="stream-name">' + (s.vj || s.sourceName || "Stream " + (idx + 1)) + '</div><div class="stream-sub">' + (s.subtitle || s.server || "") + '</div></div><div class="stream-speed ' + (s.isFast ? "fast" : "normal") + '">' + (s.isFast ? "Fast" : "Normal") + '</div></div>';
     });
   }
-
   container.innerHTML = html;
 }
 
-function selectStream(idx) {
-  currentSelectedStream = idx;
-  renderStreamSelector();
-}
+function selectStream(idx) { currentSelectedStream = idx; renderStreamSelector(); }
 
 function selectVJOption(vjIdx) {
   selectedVJIndex = vjIdx;
@@ -1850,7 +1825,7 @@ function selectVJOption(vjIdx) {
 }
 
 // ================================================================
-// EPISODES (DETAIL PAGE)
+// EPISODES
 // ================================================================
 function initEpisodes(videos) {
   allEpisodes = (videos || []).map(function(ep, i) {
@@ -1971,10 +1946,7 @@ function renderPlayerVJBar() {
   var bar = document.getElementById("playerVJBar");
   var chips = document.getElementById("playerVJChips");
   if (!bar || !chips) return;
-  if (!vjGroups || vjGroups.length < 2) {
-    bar.style.display = "none";
-    return;
-  }
+  if (!vjGroups || vjGroups.length < 2) { bar.style.display = "none"; return; }
   bar.style.display = "flex";
   chips.innerHTML = "";
   vjGroups.forEach(function(g, i) {
@@ -1997,8 +1969,7 @@ function switchPlayerVJ(vjIdx) {
   if (!best) return;
   currentSelectedStream = best.globalIndex;
   var stream = best.stream;
-  var rawUrl = stream.url || stream.fallbackUrl || "";
-  var resolvedUrl = resolveStreamUrl(rawUrl);
+  var resolvedUrl = resolveStreamUrl(stream.url || stream.fallbackUrl || "");
   video.pause();
   video.src = resolvedUrl;
   video.load();
@@ -2009,12 +1980,6 @@ function switchPlayerVJ(vjIdx) {
   });
   renderPlayerVJBar();
   showToast("Switched to: " + vjGroups[vjIdx].name, "success");
-  if (currentDetail && allEpisodes.length > 0 && currentEpisodeIndex >= 0) {
-    var ep = allEpisodes[currentEpisodeIndex];
-    if (ep) {
-      document.getElementById("playerTitle").textContent = currentDetail.name + " - S" + ep.season + " E" + ep.number;
-    }
-  }
 }
 
 function showPlayerTab(tabName) {
@@ -2022,16 +1987,9 @@ function showPlayerTab(tabName) {
   for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
   var contents = document.querySelectorAll(".player-tab-content");
   for (var j = 0; j < contents.length; j++) contents[j].classList.remove("active");
-  if (tabName === "episodes") {
-    document.getElementById("ptabEpisodes").classList.add("active");
-    document.getElementById("playerTabEpisodes").classList.add("active");
-  } else if (tabName === "related") {
-    document.querySelectorAll(".player-tab")[1].classList.add("active");
-    document.getElementById("playerTabRelated").classList.add("active");
-  } else if (tabName === "info") {
-    document.querySelectorAll(".player-tab")[2].classList.add("active");
-    document.getElementById("playerTabInfo").classList.add("active");
-  }
+  if (tabName === "episodes") { document.getElementById("ptabEpisodes").classList.add("active"); document.getElementById("playerTabEpisodes").classList.add("active"); }
+  else if (tabName === "related") { document.querySelectorAll(".player-tab")[1].classList.add("active"); document.getElementById("playerTabRelated").classList.add("active"); }
+  else if (tabName === "info") { document.querySelectorAll(".player-tab")[2].classList.add("active"); document.getElementById("playerTabInfo").classList.add("active"); }
 }
 
 function renderPlayerEpisodes() {
@@ -2041,10 +1999,8 @@ function renderPlayerEpisodes() {
   var seasons = {};
   allEpisodes.forEach(function(ep) { if (!seasons[ep.season]) seasons[ep.season] = []; seasons[ep.season].push(ep); });
   var seasonNums = Object.keys(seasons).map(Number).sort(function(a, b) { return a - b; });
-
   var html = "";
   html += '<div class="player-ep-actions-bar"><button class="player-ep-select-btn" onclick="selectAllEpisodes()">Select All</button><button class="player-ep-select-btn primary" id="batchDlBtn" onclick="downloadSelectedEpisodes()">Download Selected</button></div>';
-
   if (seasonNums.length > 1) {
     html += '<div class="season-tabs">';
     seasonNums.forEach(function(s) {
@@ -2052,7 +2008,6 @@ function renderPlayerEpisodes() {
     });
     html += '</div>';
   }
-
   var eps = seasons[currentSeason] || allEpisodes;
   html += '<div id="playerEpisodeList">';
   eps.forEach(function(ep) {
@@ -2069,10 +2024,7 @@ function renderPlayerEpisodes() {
   updateBatchDownloadBar();
 }
 
-function selectPlayerSeason(seasonNum) {
-  currentSeason = parseInt(seasonNum);
-  renderPlayerEpisodes();
-}
+function selectPlayerSeason(seasonNum) { currentSeason = parseInt(seasonNum); renderPlayerEpisodes(); }
 
 function playEpisodeFromList(globalIdx) {
   if (globalIdx < 0 || globalIdx >= allEpisodes.length) return;
@@ -2148,9 +2100,7 @@ function renderPlayerInfo() {
   if (meta.imdbRating) html += '<div class="detail-imdb">IMDb ' + meta.imdbRating + '</div>';
   if (meta.certification) html += '<div class="detail-badge">' + meta.certification + '</div>';
   html += '</div>';
-  if (meta.cast && meta.cast.length) {
-    html += '<div class="sub-section-title" style="margin-top:12px">Cast</div><p style="font-size:13px;color:var(--text-2);line-height:1.6">' + (Array.isArray(meta.cast) ? meta.cast.join(", ") : meta.cast) + '</p>';
-  }
+  if (meta.cast && meta.cast.length) html += '<div class="sub-section-title" style="margin-top:12px">Cast</div><p style="font-size:13px;color:var(--text-2);line-height:1.6">' + (Array.isArray(meta.cast) ? meta.cast.join(", ") : meta.cast) + '</p>';
   if (meta.director) html += '<div class="sub-section-title" style="margin-top:12px">Director</div><p style="font-size:13px;color:var(--text-2)">' + meta.director + '</p>';
   if (meta.writer) html += '<div class="sub-section-title" style="margin-top:12px">Writer</div><p style="font-size:13px;color:var(--text-2)">' + meta.writer + '</p>';
   html += '</div>';
