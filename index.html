@@ -9,6 +9,8 @@
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark">
 <title>OmegaStream</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
 :root{--primary:#00DC82;--primary-dark:#00B86B;--bg:#000;--surface:#0A0A0C;--card:#111114;--card-hover:#1A1D24;--text:#FFF;--text-2:rgba(255,255,255,0.7);--text-3:rgba(255,255,255,0.4);--glass:rgba(255,255,255,0.06);--glass-border:rgba(255,255,255,0.1);--error:#FF4757;--warning:#FFA502;--radius:14px;--radius-sm:8px;--radius-pill:28px}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -514,6 +516,13 @@ function getDownloadableUrl(rawUrl) {
   return rawUrl;
 }
 
+function esc(s) {
+  return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function escJs(s) {
+  return esc(String(s == null ? "" : s).replace(/\\/g, "\\\\").replace(/'/g, "\\'"));
+}
+
 function sanitizeFilename(name) {
   if (!name) return "video";
   return String(name).replace(/[<>:"/\\|?*\x00-\x1f]/g, "").replace(/\s+/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "").substring(0, 120) || "video";
@@ -541,7 +550,7 @@ function showToast(msg, type) {
   toast.className = "toast";
   var iconClass = type === "error" ? "error" : type === "info" ? "info" : "success";
   var iconSymbol = type === "error" ? "!" : type === "info" ? "i" : "+";
-  toast.innerHTML = '<div class="toast-icon ' + iconClass + '">' + iconSymbol + '</div><div>' + msg + '</div>';
+  toast.innerHTML = '<div class="toast-icon ' + iconClass + '">' + iconSymbol + '</div><div>' + esc(msg) + '</div>';
   container.appendChild(toast);
   setTimeout(function() { toast.classList.add("hiding"); setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300); }, 2800);
 }
@@ -1025,9 +1034,9 @@ function renderDownloadList() {
     }
     var locationHtml = "";
     if (item.saveLocation && item.status !== "queued") {
-      locationHtml = '<div class="dl-save-hint">' + item.saveLocation + '</div>';
+      locationHtml = '<div class="dl-save-hint">' + esc(item.saveLocation) + '</div>';
     }
-    html += '<div class="dl-item ' + item.status + '"><div class="dl-item-status-icon ' + iconClass + '">' + iconChar + '</div><div class="dl-item-info"><div class="dl-item-name">' + item.fileName + '</div><div class="dl-item-status"><span>' + statusText + '</span>' + byteInfo + '</div>' + locationHtml + '<div class="dl-progress-wrap"><div class="dl-progress-fill" style="width:' + (item.progress || 0) + '%"></div></div></div></div>';
+    html += '<div class="dl-item ' + item.status + '"><div class="dl-item-status-icon ' + iconClass + '">' + iconChar + '</div><div class="dl-item-info"><div class="dl-item-name">' + esc(item.fileName) + '</div><div class="dl-item-status"><span>' + esc(statusText) + '</span>' + byteInfo + '</div>' + locationHtml + '<div class="dl-progress-wrap"><div class="dl-progress-fill" style="width:' + (item.progress || 0) + '%"></div></div></div></div>';
   }
   container.innerHTML = html;
 }
@@ -1179,13 +1188,13 @@ function renderHeroCarousel(metas) {
   var slidesHtml = ""; var dotsHtml = "";
   metas.forEach(function(meta, i) {
     var bg = meta.background || meta.banner || meta.poster || "";
-    var name = meta.name || "";
-    var year = meta.releaseInfo || "";
-    var genres = meta.genres ? (Array.isArray(meta.genres) ? meta.genres.slice(0, 2).join(", ") : meta.genres) : "";
-    var vj = meta.vj || (meta.vjs && meta.vjs.length ? meta.vjs[0] : "");
-    var desc = meta.description || "";
+    var name = esc(meta.name || "");
+    var year = esc(meta.releaseInfo || "");
+    var genres = esc(meta.genres ? (Array.isArray(meta.genres) ? meta.genres.slice(0, 2).join(", ") : meta.genres) : "");
+    var vj = esc(meta.vj || (meta.vjs && meta.vjs.length ? meta.vjs[0] : ""));
+    var desc = esc(meta.description || "");
     var type = meta.type || "movie";
-    slidesHtml += '<div class="hero-slide' + (i === 0 ? ' active' : '') + '" onclick="openDetail(\'' + type + '\',\'' + meta.id + '\')"><img src="' + bg + '" alt="" onerror="this.src=\'' + (meta.poster || '') + '\'"><div class="hero-gradient"></div><div class="hero-glow-l"></div><div class="hero-glow-r"></div><div class="hero-content"><div class="hero-badge">Trending Now</div><div class="hero-title">' + name + '</div><div class="hero-meta">' + (year ? '<span>' + year + '</span><div class="dot"></div>' : '') + (genres ? '<span>' + genres + '</span>' : '') + (vj ? '<div class="dot"></div><span>' + vj + '</span>' : '') + '</div>' + (desc ? '<div class="hero-desc">' + desc + '</div>' : '') + '<div class="hero-actions"><button class="btn-primary" onclick="event.stopPropagation();openDetail(\'' + type + '\',\'' + meta.id + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> Watch Now</button><button class="btn-secondary" onclick="event.stopPropagation();openDetail(\'' + type + '\',\'' + meta.id + '\')">More Info</button></div></div></div>';
+    slidesHtml += '<div class="hero-slide' + (i === 0 ? ' active' : '') + '" onclick="openDetail(\'' + escJs(type) + '\',\'' + escJs(meta.id) + '\')"><img src="' + esc(bg) + '" alt="" onerror="this.src=\'' + escJs(meta.poster || '') + '\'"><div class="hero-gradient"></div><div class="hero-glow-l"></div><div class="hero-glow-r"></div><div class="hero-content"><div class="hero-badge">Trending Now</div><div class="hero-title">' + name + '</div><div class="hero-meta">' + (year ? '<span>' + year + '</span><div class="dot"></div>' : '') + (genres ? '<span>' + genres + '</span>' : '') + (vj ? '<div class="dot"></div><span>' + vj + '</span>' : '') + '</div>' + (desc ? '<div class="hero-desc">' + desc + '</div>' : '') + '<div class="hero-actions"><button class="btn-primary" onclick="event.stopPropagation();openDetail(\'' + escJs(type) + '\',\'' + escJs(meta.id) + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> Watch Now</button><button class="btn-secondary" onclick="event.stopPropagation();openDetail(\'' + escJs(type) + '\',\'' + escJs(meta.id) + '\')">More Info</button></div></div></div>';
     dotsHtml += '<div class="hero-dot' + (i === 0 ? ' active' : '') + '" onclick="goHeroSlide(' + i + ')"></div>';
   });
   heroDiv.innerHTML = '<div class="hero-carousel" ontouchstart="heroTouchStart(event)" ontouchend="heroTouchEnd(event)"><div class="hero-slides">' + slidesHtml + '</div><div class="hero-dots">' + dotsHtml + '</div></div>';
@@ -1353,16 +1362,16 @@ function renderSuggestions(matches, query) {
   matches.forEach(function(item) {
     var name = item.name || "";
     var nt = normalizeString(name);
-    var highlighted = name;
+    var highlighted = esc(name);
     if (nt.indexOf(nq) !== -1) {
       var idx = name.toLowerCase().indexOf(query.toLowerCase());
-      if (idx >= 0) highlighted = name.substring(0, idx) + "<mark>" + name.substring(idx, idx + query.length) + "</mark>" + name.substring(idx + query.length);
+      if (idx >= 0) highlighted = esc(name.substring(0, idx)) + "<mark>" + esc(name.substring(idx, idx + query.length)) + "</mark>" + esc(name.substring(idx + query.length));
     } else {
-      highlighted = name + ' <span class="suggestion-fuzzy">~match</span>';
+      highlighted = esc(name) + ' <span class="suggestion-fuzzy">~match</span>';
     }
-    html += '<div class="suggestion-item" onclick="hideSuggestions();openDetail(\'' + (item.type || "movie") + '\',\'' + item.id + '\')"><div class="suggestion-name">' + highlighted + '</div><div class="suggestion-meta">' + (item.releaseInfo || "") + '</div></div>';
+    html += '<div class="suggestion-item" onclick="hideSuggestions();openDetail(\'' + escJs(item.type || "movie") + '\',\'' + escJs(item.id) + '\')"><div class="suggestion-name">' + highlighted + '</div><div class="suggestion-meta">' + esc(item.releaseInfo || "") + '</div></div>';
   });
-  html += '<div class="suggestion-all" onclick="onSearchSubmit(\'' + query.replace(/'/g, "\\'") + '\')">View all results for "' + query + '"</div>';
+  html += '<div class="suggestion-all" onclick="onSearchSubmit(\'' + escJs(query) + '\')">View all results for "' + esc(query) + '"</div>';
   container.innerHTML = html;
   container.className = "show";
 }
@@ -1399,12 +1408,12 @@ function renderSearchResults(metas, query) {
   var content = document.getElementById("homeContent");
   content.innerHTML = "";
   if (!metas.length) {
-    content.innerHTML = '<div class="empty-state animate-up"><div class="empty-icon">&#128269;</div><h3>No results for "' + query + '"</h3><p>Try different words or check spelling</p></div>';
+    content.innerHTML = '<div class="empty-state animate-up"><div class="empty-icon">&#128269;</div><h3>No results for "' + esc(query) + '"</h3><p>Try different words or check spelling</p></div>';
     return;
   }
   var section = document.createElement("div");
   section.className = "section animate-up";
-  section.innerHTML = '<div class="section-header"><div class="section-title">Results for "' + query + '" (' + metas.length + ')</div></div>';
+  section.innerHTML = '<div class="section-header"><div class="section-title">Results for "' + esc(query) + '" (' + metas.length + ')</div></div>';
   var grid = document.createElement("div");
   grid.className = "poster-grid";
   metas.forEach(function(meta) { grid.appendChild(createPosterCard(meta)); });
@@ -1526,7 +1535,7 @@ function renderFilteredGrid(items, title) {
   }
   var section = document.createElement("div");
   section.className = "section animate-up";
-  section.innerHTML = '<div class="section-header"><div class="section-title">' + title + ' (' + items.length + ')</div></div>';
+  section.innerHTML = '<div class="section-header"><div class="section-title">' + esc(title) + ' (' + items.length + ')</div></div>';
   var grid = document.createElement("div");
   grid.className = "poster-grid";
   items.forEach(function(meta) { grid.appendChild(createPosterCard(meta)); });
@@ -1641,7 +1650,7 @@ function renderContinueSection() {
     card.className = "continue-card";
     card.onclick = function() { currentEpisodeIndex = item.episodeIndex || -1; openDetail(item.type, item.id); };
     var pct = item.duration > 0 ? (item.currentTime / item.duration * 100) : 0;
-    card.innerHTML = '<div class="continue-img-wrap"><img src="' + item.poster + '" alt="" onerror="this.src=\'\'"><div class="continue-progress" style="width:' + pct + '%"></div><div class="continue-play-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="#000"><polygon points="5,3 19,12 5,21"/></svg></div><button class="continue-remove" onclick="removeContinue(\'' + item.id + '\', event)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div><div class="continue-info"><div class="continue-name">' + item.name + '</div><div class="continue-ep">' + (item.episodeInfo || "Resume") + '</div></div>';
+    card.innerHTML = '<div class="continue-img-wrap"><img src="' + esc(item.poster) + '" alt="" onerror="this.src=\'\'"><div class="continue-progress" style="width:' + pct + '%"></div><div class="continue-play-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="#000"><polygon points="5,3 19,12 5,21"/></svg></div><button class="continue-remove" onclick="removeContinue(\'' + escJs(item.id) + '\', event)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div><div class="continue-info"><div class="continue-name">' + esc(item.name) + '</div><div class="continue-ep">' + esc(item.episodeInfo || "Resume") + '</div></div>';
     scroll.appendChild(card);
   });
   section.appendChild(scroll);
@@ -1725,15 +1734,15 @@ function renderDetail(meta) {
   else { logo.style.display = "none"; titleText.textContent = meta.name || "Unknown"; titleText.style.display = ""; }
   var metaRow = document.getElementById("detailMetaRow");
   metaRow.innerHTML = "";
-  if (meta.releaseInfo) metaRow.innerHTML += '<div class="detail-meta-item">' + meta.releaseInfo + '</div>';
-  if (meta.runtime) metaRow.innerHTML += '<div class="detail-meta-item">' + meta.runtime + '</div>';
-  if (meta.certification) metaRow.innerHTML += '<div class="detail-badge">' + meta.certification + '</div>';
-  if (meta.imdbRating) metaRow.innerHTML += '<div class="detail-imdb">IMDb ' + meta.imdbRating + '</div>';
+  if (meta.releaseInfo) metaRow.innerHTML += '<div class="detail-meta-item">' + esc(meta.releaseInfo) + '</div>';
+  if (meta.runtime) metaRow.innerHTML += '<div class="detail-meta-item">' + esc(meta.runtime) + '</div>';
+  if (meta.certification) metaRow.innerHTML += '<div class="detail-badge">' + esc(meta.certification) + '</div>';
+  if (meta.imdbRating) metaRow.innerHTML += '<div class="detail-imdb">IMDb ' + esc(meta.imdbRating) + '</div>';
   var tagsDiv = document.getElementById("detailTags");
   tagsDiv.innerHTML = "";
   var genres = meta.genres ? (Array.isArray(meta.genres) ? meta.genres : [meta.genres]) : [];
-  genres.forEach(function(g) { tagsDiv.innerHTML += '<div class="detail-tag">' + g + '</div>'; });
-  if (meta.vj) tagsDiv.innerHTML += '<div class="detail-tag vj-tag">VJ: ' + meta.vj + '</div>';
+  genres.forEach(function(g) { tagsDiv.innerHTML += '<div class="detail-tag">' + esc(g) + '</div>'; });
+  if (meta.vj) tagsDiv.innerHTML += '<div class="detail-tag vj-tag">VJ: ' + esc(meta.vj) + '</div>';
   if (meta.isDubbed) tagsDiv.innerHTML += '<div class="detail-tag vj-tag">Dubbed</div>';
   document.getElementById("detailDesc").textContent = meta.description || "";
   var wlBtn = document.getElementById("detailWatchlistBtn");
@@ -1764,7 +1773,7 @@ function loadStreams(id, type) {
     }
     renderStreamSelector();
   }).catch(function(err) {
-    container.innerHTML = '<div class="error-state"><p>Failed to load streams: ' + err.message + '</p><button class="retry-btn" onclick="loadStreams(\'' + id + '\',\'' + type + '\')">Retry</button></div>';
+    container.innerHTML = '<div class="error-state"><p>Failed to load streams: ' + esc(err.message) + '</p><button class="retry-btn" onclick="loadStreams(\'' + escJs(id) + '\',\'' + escJs(type) + '\')">Retry</button></div>';
   });
 }
 
@@ -1781,7 +1790,7 @@ function renderStreamSelector() {
     html += '<div class="vj-section-title">Choose VJ / Audio Version</div>';
     html += '<div class="vj-chips">';
     vjGroups.forEach(function(g, i) {
-      html += '<button class="vj-chip' + (i === selectedVJIndex ? ' active' : '') + '" onclick="selectVJOption(' + i + ')">' + g.name + '<span class="vj-chip-count">' + g.streams.length + '</span></button>';
+      html += '<button class="vj-chip' + (i === selectedVJIndex ? ' active' : '') + '" onclick="selectVJOption(' + i + ')">' + esc(g.name) + '<span class="vj-chip-count">' + g.streams.length + '</span></button>';
     });
     html += '</div>';
     var activeGroup = vjGroups[selectedVJIndex];
@@ -1789,13 +1798,13 @@ function renderStreamSelector() {
       html += '<div class="sub-section-title">Streams (' + activeGroup.name + ')</div>';
       activeGroup.streams.forEach(function(s, idx) {
         var globalIdx = activeGroup.globalIndices[idx];
-        html += '<div class="stream-option' + (globalIdx === currentSelectedStream ? ' active' : '') + '" onclick="selectStream(' + globalIdx + ')"><div class="stream-icon-wrap">' + (s.isFast ? '&#9889;' : '&#127909;') + '</div><div class="stream-info"><div class="stream-name">' + (s.name || s.sourceName || "Stream " + (globalIdx + 1)) + '</div><div class="stream-sub">' + (s.subtitle || s.server || "") + '</div><div class="vj-label">VJ: ' + activeGroup.name + '</div></div><div class="stream-speed ' + (s.isFast ? "fast" : "normal") + '">' + (s.isFast ? "Fast" : "Normal") + '</div></div>';
+        html += '<div class="stream-option' + (globalIdx === currentSelectedStream ? ' active' : '') + '" onclick="selectStream(' + globalIdx + ')"><div class="stream-icon-wrap">' + (s.isFast ? '&#9889;' : '&#127909;') + '</div><div class="stream-info"><div class="stream-name">' + esc(s.name || s.sourceName || "Stream " + (globalIdx + 1)) + '</div><div class="stream-sub">' + esc(s.subtitle || s.server || "") + '</div><div class="vj-label">VJ: ' + esc(activeGroup.name) + '</div></div><div class="stream-speed ' + (s.isFast ? "fast" : "normal") + '">' + (s.isFast ? "Fast" : "Normal") + '</div></div>';
       });
     }
   } else {
     html += '<div class="sub-section-title">Choose Stream</div>';
     currentStreams.forEach(function(s, idx) {
-      html += '<div class="stream-option' + (idx === currentSelectedStream ? ' active' : '') + '" onclick="selectStream(' + idx + ')"><div class="stream-icon-wrap">' + (s.isFast ? '&#9889;' : '&#127909;') + '</div><div class="stream-info"><div class="stream-name">' + (s.vj || s.sourceName || "Stream " + (idx + 1)) + '</div><div class="stream-sub">' + (s.subtitle || s.server || "") + '</div></div><div class="stream-speed ' + (s.isFast ? "fast" : "normal") + '">' + (s.isFast ? "Fast" : "Normal") + '</div></div>';
+      html += '<div class="stream-option' + (idx === currentSelectedStream ? ' active' : '') + '" onclick="selectStream(' + idx + ')"><div class="stream-icon-wrap">' + (s.isFast ? '&#9889;' : '&#127909;') + '</div><div class="stream-info"><div class="stream-name">' + esc(s.vj || s.sourceName || "Stream " + (idx + 1)) + '</div><div class="stream-sub">' + esc(s.subtitle || s.server || "") + '</div></div><div class="stream-speed ' + (s.isFast ? "fast" : "normal") + '">' + (s.isFast ? "Fast" : "Normal") + '</div></div>';
     });
   }
   container.innerHTML = html;
@@ -1861,7 +1870,7 @@ function renderEpisodeItems(episodes) {
     var item = document.createElement("div");
     item.className = "episode-item" + (globalIdx === currentEpisodeIndex ? " playing" : "");
     item.setAttribute("data-idx", globalIdx);
-    item.innerHTML = '<div class="ep-num">' + ep.number + '</div><div class="ep-info"><div class="ep-name">' + ep.name + '</div><div class="ep-date">' + ep.released + (ep.duration ? " | " + ep.duration : "") + '</div></div><div class="ep-play-icon">' + (globalIdx === currentEpisodeIndex ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>' : '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>') + '</div>';
+    item.innerHTML = '<div class="ep-num">' + esc(ep.number) + '</div><div class="ep-info"><div class="ep-name">' + esc(ep.name) + '</div><div class="ep-date">' + esc(ep.released) + (ep.duration ? " | " + esc(ep.duration) : "") + '</div></div><div class="ep-play-icon">' + (globalIdx === currentEpisodeIndex ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>' : '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>') + '</div>';
     item.onclick = function() {
       var idx = parseInt(this.getAttribute("data-idx"));
       if (idx >= 0) { currentEpisodeIndex = idx; loadEpisodeStream(allEpisodes[idx]); }
@@ -2006,7 +2015,7 @@ function renderPlayerEpisodes() {
     }
     var isPlaying = globalIdx === currentEpisodeIndex;
     var isChecked = !!selectedEpDownload[globalIdx];
-    html += '<div class="player-ep-item' + (isPlaying ? ' playing' : '') + '" onclick="playEpisodeFromList(' + globalIdx + ')"><div class="player-ep-check' + (isChecked ? ' checked' : '') + '" onclick="event.stopPropagation();toggleEpDownload(' + globalIdx + ')"></div><div class="player-ep-num">' + ep.number + '</div><div class="player-ep-info"><div class="player-ep-name">' + ep.name + '</div><div class="player-ep-date">' + ep.released + (ep.duration ? " | " + ep.duration : "") + (isPlaying ? ' <span class="player-ep-now">Now Playing</span>' : '') + '</div></div><button class="player-ep-dl-btn" onclick="event.stopPropagation();downloadSingleEpisode(' + globalIdx + ')" title="Download"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button></div>';
+    html += '<div class="player-ep-item' + (isPlaying ? ' playing' : '') + '" onclick="playEpisodeFromList(' + globalIdx + ')"><div class="player-ep-check' + (isChecked ? ' checked' : '') + '" onclick="event.stopPropagation();toggleEpDownload(' + globalIdx + ')"></div><div class="player-ep-num">' + esc(ep.number) + '</div><div class="player-ep-info"><div class="player-ep-name">' + esc(ep.name) + '</div><div class="player-ep-date">' + esc(ep.released) + (ep.duration ? " | " + esc(ep.duration) : "") + (isPlaying ? ' <span class="player-ep-now">Now Playing</span>' : '') + '</div></div><button class="player-ep-dl-btn" onclick="event.stopPropagation();downloadSingleEpisode(' + globalIdx + ')" title="Download"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button></div>';
   });
   html += '</div>';
   container.innerHTML = html;
@@ -2072,26 +2081,26 @@ function renderPlayerInfo() {
   if (!currentDetail || !container) return;
   var meta = currentDetail;
   var html = '<div style="padding-bottom:20px">';
-  if (meta.description) html += '<p style="font-size:14px;line-height:1.7;color:var(--text-2);margin-bottom:16px">' + meta.description + '</p>';
+  if (meta.description) html += '<p style="font-size:14px;line-height:1.7;color:var(--text-2);margin-bottom:16px">' + esc(meta.description) + '</p>';
   html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">';
   var genres = meta.genres ? (Array.isArray(meta.genres) ? meta.genres : [meta.genres]) : [];
-  genres.forEach(function(g) { html += '<div class="detail-tag">' + g + '</div>'; });
-  if (meta.vj) html += '<div class="detail-tag vj-tag">VJ: ' + meta.vj + '</div>';
+  genres.forEach(function(g) { html += '<div class="detail-tag">' + esc(g) + '</div>'; });
+  if (meta.vj) html += '<div class="detail-tag vj-tag">VJ: ' + esc(meta.vj) + '</div>';
   if (vjGroups && vjGroups.length > 1) {
     vjGroups.forEach(function(g) {
-      if (g.name !== meta.vj) html += '<div class="detail-tag vj-tag">Available: ' + g.name + '</div>';
+      if (g.name !== meta.vj) html += '<div class="detail-tag vj-tag">Available: ' + esc(g.name) + '</div>';
     });
   }
   html += '</div>';
   html += '<div class="detail-meta-row" style="margin-bottom:12px">';
-  if (meta.releaseInfo) html += '<div class="detail-meta-item">' + meta.releaseInfo + '</div>';
-  if (meta.runtime) html += '<div class="detail-meta-item">' + meta.runtime + '</div>';
-  if (meta.imdbRating) html += '<div class="detail-imdb">IMDb ' + meta.imdbRating + '</div>';
-  if (meta.certification) html += '<div class="detail-badge">' + meta.certification + '</div>';
+  if (meta.releaseInfo) html += '<div class="detail-meta-item">' + esc(meta.releaseInfo) + '</div>';
+  if (meta.runtime) html += '<div class="detail-meta-item">' + esc(meta.runtime) + '</div>';
+  if (meta.imdbRating) html += '<div class="detail-imdb">IMDb ' + esc(meta.imdbRating) + '</div>';
+  if (meta.certification) html += '<div class="detail-badge">' + esc(meta.certification) + '</div>';
   html += '</div>';
-  if (meta.cast && meta.cast.length) html += '<div class="sub-section-title" style="margin-top:12px">Cast</div><p style="font-size:13px;color:var(--text-2);line-height:1.6">' + (Array.isArray(meta.cast) ? meta.cast.join(", ") : meta.cast) + '</p>';
-  if (meta.director) html += '<div class="sub-section-title" style="margin-top:12px">Director</div><p style="font-size:13px;color:var(--text-2)">' + meta.director + '</p>';
-  if (meta.writer) html += '<div class="sub-section-title" style="margin-top:12px">Writer</div><p style="font-size:13px;color:var(--text-2)">' + meta.writer + '</p>';
+  if (meta.cast && meta.cast.length) html += '<div class="sub-section-title" style="margin-top:12px">Cast</div><p style="font-size:13px;color:var(--text-2);line-height:1.6">' + esc(Array.isArray(meta.cast) ? meta.cast.join(", ") : meta.cast) + '</p>';
+  if (meta.director) html += '<div class="sub-section-title" style="margin-top:12px">Director</div><p style="font-size:13px;color:var(--text-2)">' + esc(meta.director) + '</p>';
+  if (meta.writer) html += '<div class="sub-section-title" style="margin-top:12px">Writer</div><p style="font-size:13px;color:var(--text-2)">' + esc(meta.writer) + '</p>';
   html += '</div>';
   container.innerHTML = html;
 }
@@ -2151,6 +2160,23 @@ function showHome() {
 // ================================================================
 // VIDEO PLAYBACK
 // ================================================================
+function fmtTime(sec) {
+  sec = Math.max(0, Math.floor(sec || 0));
+  var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), x = sec % 60;
+  return (h ? h + ":" + (m < 10 ? "0" : "") : "") + m + ":" + (x < 10 ? "0" : "") + x;
+}
+
+function getResumePoint() {
+  if (!currentDetail) return 0;
+  var list = getContinue();
+  for (var i = 0; i < list.length; i++) {
+    var p = list[i];
+    var pe = (p.episodeIndex === undefined || p.episodeIndex === null) ? -1 : p.episodeIndex;
+    if (p.id === currentDetail.id && pe === currentEpisodeIndex && p.currentTime > 15 && p.duration > 0 && p.currentTime < p.duration - 30) return p.currentTime;
+  }
+  return 0;
+}
+
 function startPlayback(rawStreamUrl, fallbackUrl) {
   var video = document.getElementById("videoPlayer");
   var streamUrl = resolveStreamUrl(rawStreamUrl);
@@ -2165,6 +2191,14 @@ function startPlayback(rawStreamUrl, fallbackUrl) {
   video.load();
   hideStatus();
 
+  var resumeAt = getResumePoint();
+  if (resumeAt > 0) {
+    video.addEventListener("loadedmetadata", function onResume() {
+      video.removeEventListener("loadedmetadata", onResume);
+      try { video.currentTime = resumeAt; showToast("Resuming at " + fmtTime(resumeAt), "info"); } catch (e) {}
+    });
+  }
+
   setTimeout(function() {
     video.src = streamUrl;
     video.load();
@@ -2172,8 +2206,48 @@ function startPlayback(rawStreamUrl, fallbackUrl) {
   }, 100);
 
   var stallTimer = null;
+  var waitTimer = null;
   var recoverTime = 0;
   var fallbackUsed = false;
+  var curUrl = streamUrl;
+  var retries = 0;
+  var MAX_RETRIES = 3;
+
+  function reloadAt(url, t, delay) {
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+    setTimeout(function() {
+      video.src = url;
+      video.load();
+      if (t > 0) {
+        video.addEventListener("loadedmetadata", function m() {
+          video.removeEventListener("loadedmetadata", m);
+          try { video.currentTime = t; } catch (e) {}
+        });
+      }
+      video.play().catch(function() {});
+    }, delay);
+  }
+
+  function onWaiting() {
+    if (waitTimer) clearTimeout(waitTimer);
+    waitTimer = setTimeout(function() {
+      if (!video.paused && video.readyState < 3 && retries < MAX_RETRIES && navigator.onLine !== false) {
+        retries++;
+        showStatus("Stream stalled, reconnecting...", "warning");
+        reloadAt(curUrl, video.currentTime || 0, 300);
+      }
+    }, 10000);
+  }
+
+  function onOnline() {
+    if (video.error || (video.readyState < 3 && !video.paused)) {
+      showStatus("Back online, resuming...");
+      retries = 0;
+      reloadAt(curUrl, video.currentTime || recoverTime || 0, 300);
+    }
+  }
 
   function onSeeking() {
     recoverTime = video.currentTime;
@@ -2185,7 +2259,7 @@ function startPlayback(rawStreamUrl, fallbackUrl) {
         video.removeAttribute("src");
         video.load();
         setTimeout(function() {
-          video.src = streamUrl;
+          video.src = curUrl;
           video.addEventListener("loadedmetadata", function onMeta() {
             video.removeEventListener("loadedmetadata", onMeta);
             video.currentTime = t;
@@ -2196,7 +2270,12 @@ function startPlayback(rawStreamUrl, fallbackUrl) {
     }, 4000);
   }
 
-  function onPlaying() { if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; } }
+  function onPlaying() {
+    retries = 0;
+    if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; }
+    if (waitTimer) { clearTimeout(waitTimer); waitTimer = null; }
+    hideStatus();
+  }
 
   function onError() {
     var err = video.error;
@@ -2209,17 +2288,29 @@ function startPlayback(rawStreamUrl, fallbackUrl) {
         case 4: errMsg = "Format not supported"; break;
       }
     }
-    if (resolvedFallback && !fallbackUsed && resolvedFallback !== streamUrl) {
-      fallbackUsed = true;
-      showStatus("Trying backup stream...");
-      video.pause();
-      video.removeAttribute("src");
-      video.load();
-      setTimeout(function() { video.src = resolvedFallback; video.load(); video.play().catch(function(){}); }, 100);
+    if (err && err.code === 1) return;
+    var t = video.currentTime || recoverTime || 0;
+    if (navigator.onLine === false) {
+      showStatus("You're offline - will resume when you're back online", "warning");
       return;
     }
-    showStatus("Error: " + errMsg + " - tap play to retry", "error");
-    setTimeout(hideStatus, 6000);
+    if (retries < MAX_RETRIES) {
+      retries++;
+      showStatus("Connection hiccup, retrying (" + retries + "/" + MAX_RETRIES + ")...", "warning");
+      reloadAt(curUrl, t, 1000 * Math.pow(2, retries - 1));
+      return;
+    }
+    if (resolvedFallback && !fallbackUsed && resolvedFallback !== streamUrl) {
+      fallbackUsed = true;
+      retries = 0;
+      curUrl = resolvedFallback;
+      showStatus("Trying backup stream...");
+      reloadAt(curUrl, t, 100);
+      return;
+    }
+    var hint = (err && (err.code === 2 || err.code === 4)) ? "Stream may have expired. Go back and reopen the title, or pick another VJ/stream." : errMsg + " - tap play to retry";
+    showStatus(hint, "error");
+    setTimeout(hideStatus, 8000);
   }
 
   function onEnded() {
@@ -2231,12 +2322,17 @@ function startPlayback(rawStreamUrl, fallbackUrl) {
   }
 
   video.addEventListener("seeking", onSeeking);
+  video.addEventListener("waiting", onWaiting);
+  window.addEventListener("online", onOnline);
   video.addEventListener("playing", onPlaying);
   video.addEventListener("error", onError);
   video.addEventListener("ended", onEnded);
 
   video._stallCleanup = function() {
     video.removeEventListener("seeking", onSeeking);
+    video.removeEventListener("waiting", onWaiting);
+    window.removeEventListener("online", onOnline);
+    if (waitTimer) { clearTimeout(waitTimer); waitTimer = null; }
     video.removeEventListener("playing", onPlaying);
     video.removeEventListener("error", onError);
     video.removeEventListener("ended", onEnded);
@@ -2268,7 +2364,18 @@ function playNextEpisode() {
 // ================================================================
 // INIT
 // ================================================================
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator) || location.protocol === "file:") return;
+  window.addEventListener("load", function() {
+    navigator.serviceWorker.register("sw.js").catch(function(e) { console.log("[SW] register failed:", e && e.message); });
+  });
+  navigator.serviceWorker.addEventListener("message", function(ev) {
+    if (ev.data && ev.data.type === "update-ready") showToast("Update ready - reopen the app to get it", "info");
+  });
+}
+
 function init() {
+  registerServiceWorker();
   renderCategoryTabs();
   loadHome();
   renderDownloadList();
