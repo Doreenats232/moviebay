@@ -878,8 +878,18 @@ function downloadFileBrowser(url, fileName, onProgress) {
       if (!response.ok) {
         var herr = new Error("Server returned " + response.status);
         herr.status = response.status;
-        response.text().then(function(t) { console.log("[Download] error body:", (t || "").substring(0, 200)); }).catch(function() {});
-        reject(herr);
+        response.text().then(function(t) {
+          t = (t || "").substring(0, 300);
+          console.log("[Download] error body:", t);
+          var detail = t;
+          try { var j = JSON.parse(t); if (j && j.error) detail = String(j.error); } catch (e) {}
+          if (response.status === 400 && /Missing url parameter/i.test(t) && url.indexOf("/dl?") !== -1) {
+            herr.message = "Worker not updated yet. Deploy worker/moviebay-proxy.js in Cloudflare.";
+          } else if (detail) {
+            herr.message = "Server returned " + response.status + ": " + detail.substring(0, 120);
+          }
+          reject(herr);
+        }).catch(function() { reject(herr); });
         return;
       }
       var contentType = (response.headers.get("Content-Type") || "").toLowerCase();
