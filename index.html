@@ -874,9 +874,12 @@ function saveBlobToDownloads(blob, fileName) {
 
 function downloadFileBrowser(url, fileName, onProgress) {
   return new Promise(function(resolve, reject) {
-    fetch(url).then(function(response) {
+    fetch(url, { headers: { "Range": "bytes=0-" } }).then(function(response) {
       if (!response.ok) {
-        reject(new Error("Server returned " + response.status));
+        var herr = new Error("Server returned " + response.status);
+        herr.status = response.status;
+        response.text().then(function(t) { console.log("[Download] error body:", (t || "").substring(0, 200)); }).catch(function() {});
+        reject(herr);
         return;
       }
       var contentType = (response.headers.get("Content-Type") || "").toLowerCase();
@@ -925,10 +928,24 @@ function downloadFileBrowser(url, fileName, onProgress) {
       return pump();
     }).catch(function(err) {
       if (err.message && err.message.indexOf("Failed to fetch") !== -1) {
-        reject(new Error("Network error. Check your connection."));
+        var nerr = new Error("Network error. Check your connection.");
+        nerr.network = true;
+        reject(nerr);
       } else { reject(err); }
     });
   });
+}
+
+// --- NATIVE FALLBACK: plain navigation download (no Origin header, unlike fetch) ---
+function openNativeDownload(dlUrl, fileName) {
+  var u = dlUrl;
+  if (u.indexOf(WORKER_BASE) === 0) u += (u.indexOf("?") !== -1 ? "&" : "?") + "dl=1&fn=" + encodeURIComponent(fileName);
+  var a = document.createElement("a");
+  a.href = u; a.download = fileName; a.target = "_blank"; a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function() { if (a.parentNode) a.parentNode.removeChild(a); }, 1000);
 }
 
 // --- QUEUE MANAGEMENT ---
@@ -1048,6 +1065,17 @@ function processDownloadQueue() {
       isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue();
     }).catch(function(err) {
       console.log("[Download] Error:", err.message);
+      if (err && (err.status === 403 || err.status === 401 || err.network)) {
+        console.log("[Download] fetch refused, falling back to native download");
+        openNativeDownload(dlUrl, nextItem.fileName);
+        nextItem.status = "done";
+        nextItem.progress = 100;
+        nextItem.message = "Sent to your browser. If it plays instead, save it from the player menu.";
+        renderDownloadList();
+        showToast("Download handed to your browser", "info");
+        isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue();
+        return;
+      }
       nextItem.status = "error";
       nextItem.errorMsg = err.message || "Unknown error";
       renderDownloadList();

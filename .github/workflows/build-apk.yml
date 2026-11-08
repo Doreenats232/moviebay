@@ -250,6 +250,8 @@ jobs:
                               DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
                               req.setTitle(fileName);
                               req.setDescription("OmegaStream");
+                              req.addRequestHeader("User-Agent", webView.getSettings().getUserAgentString());
+                              req.addRequestHeader("Referer", SITE_URL);
                               if (mime != null && mime.length() > 0) req.setMimeType(mime);
                               req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
                               req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
