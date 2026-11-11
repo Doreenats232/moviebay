@@ -95,7 +95,7 @@ input{outline:none;font-family:inherit}
 .hero-desc{font-size:13px;line-height:1.5;color:var(--text-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:18px;max-width:500px}
 .hero-actions{display:flex;gap:10px}
 .hero-dots{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10}
-.hero-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.3);cursor:pointer;transition:all 0.3s}
+.hero-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.3);cursor:pointer;transition:all 0.3s;border:0;padding:0}
 .hero-dot.active{background:var(--primary);width:24px;border-radius:4px}
 .btn-primary{padding:13px 28px;border:none;border-radius:var(--radius-pill);background:var(--primary);color:#000;font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;transition:all 0.2s}
 .btn-primary:active{transform:scale(0.95);opacity:0.9}
@@ -129,6 +129,12 @@ input{outline:none;font-family:inherit}
 .skeleton-poster{width:132px;height:190px;border-radius:var(--radius);flex-shrink:0}
 .skeleton-hero{width:100%;height:440px;border-radius:0 0 28px 28px}
 .skeleton-row{display:flex;gap:12px;padding:4px 18px}
+.skeleton-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:12px;padding:4px 18px 8px}
+.skeleton-grid .skeleton{width:100%;aspect-ratio:2/3;border-radius:var(--radius)}
+.skeleton-title{height:18px;width:140px;margin:14px 18px 10px;border-radius:6px}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+[role=button]:focus:not(:focus-visible){outline:none}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 .error-state{text-align:center;padding:32px 20px}
 .error-state .error-icon{font-size:36px;margin-bottom:12px}
 .error-state p{color:var(--text-3);margin-bottom:16px;font-size:14px}
@@ -355,9 +361,9 @@ input{outline:none;font-family:inherit}
 <body>
 
 <div id="statusBar"></div>
-<div id="toastContainer"></div>
+<div id="toastContainer" role="status" aria-live="polite"></div>
 
-<div id="loadingOverlay">
+<div id="loadingOverlay" role="status" aria-live="polite">
   <div class="loader-logo">Omega<span>Stream</span></div>
   <div class="spinner"></div>
   <p>Loading your entertainment...</p>
@@ -367,7 +373,7 @@ input{outline:none;font-family:inherit}
   <div class="header">
     <div class="header-logo">Omega<span>Stream</span></div>
     <div class="header-actions">
-      <button class="icon-btn" onclick="toggleSearch()">
+      <button class="icon-btn" onclick="toggleSearch()" aria-label="Search">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
       </button>
     </div>
@@ -375,7 +381,7 @@ input{outline:none;font-family:inherit}
   <div id="searchBar">
     <div class="search-wrap">
       <span class="search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg></span>
-      <input id="searchInput" type="text" placeholder="Search movies, series, VJ..." oninput="onSearchInput(this.value)" onkeydown="if(event.key==='Enter')onSearchSubmit(this.value)" autocomplete="off">
+      <input id="searchInput" type="text" aria-label="Search movies, series and VJs" enterkeyhint="search" placeholder="Search movies, series, VJ..." oninput="onSearchInput(this.value)" onkeydown="if(event.key==='Enter')onSearchSubmit(this.value)" autocomplete="off">
     </div>
     <div id="searchSuggestions"></div>
   </div>
@@ -402,10 +408,10 @@ input{outline:none;font-family:inherit}
 <div id="detailPage">
   <div class="detail-hero">
     <div class="detail-top-btns">
-      <button class="detail-top-btn" onclick="showHome()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
-      <button class="detail-top-btn" onclick="toggleWatchlist()" id="detailWatchlistBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></button>
+      <button class="detail-top-btn" onclick="showHome()" aria-label="Back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+      <button class="detail-top-btn" onclick="toggleWatchlist()" id="detailWatchlistBtn" aria-label="Add to My List"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></button>
     </div>
-    <img id="detailBg" src="" alt="">
+    <img id="detailBg" src="" alt="" decoding="async">
     <div class="detail-hero-gradient"></div>
   </div>
   <div class="detail-info">
@@ -415,8 +421,8 @@ input{outline:none;font-family:inherit}
     <div id="detailTags" class="detail-tags"></div>
     <div class="detail-actions">
       <button id="detailPlayBtn" class="btn-primary" onclick="onDetailPlay()"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> Play Now</button>
-      <button class="action-circle-btn" onclick="downloadCurrent()" title="Download"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button>
-      <button class="action-circle-btn" onclick="playTrailer()" id="trailerBtn" title="Trailer" style="display:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/></svg></button>
+      <button class="action-circle-btn" onclick="downloadCurrent()" title="Download" aria-label="Download"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button>
+      <button class="action-circle-btn" onclick="playTrailer()" id="trailerBtn" title="Trailer" aria-label="Watch trailer" style="display:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10,8 16,12 10,16" fill="currentColor" stroke="none"/></svg></button>
     </div>
     <div id="detailDesc" class="detail-desc"></div>
     <div id="streamSelector"></div>
@@ -426,7 +432,7 @@ input{outline:none;font-family:inherit}
 
 <div id="playerPage">
   <div class="player-video-wrap" id="playerVideoWrap">
-    <video id="videoPlayer" playsinline preload="metadata"></video>
+    <video id="videoPlayer" aria-label="Video player" playsinline preload="metadata"></video>
     <div class="pc-overlay show" id="pcOverlay">
       <div class="pc-zone" id="pcZone"></div>
       <div class="pc-spin" id="pcSpin"></div>
@@ -494,15 +500,15 @@ input{outline:none;font-family:inherit}
   </div>
 </div>
 
-<button id="downloadFab" onclick="toggleDownloadPanel()">
+<button id="downloadFab" onclick="toggleDownloadPanel()" aria-label="Open downloads">
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
   <div class="dl-badge" id="downloadBadge" style="display:none">0</div>
 </button>
 
-<div id="downloadPanel">
+<div id="downloadPanel" role="dialog" aria-label="Downloads">
   <div class="dl-panel-header">
     <div class="dl-panel-title">Downloads</div>
-    <button class="dl-panel-close" onclick="toggleDownloadPanel()">&#10005;</button>
+    <button class="dl-panel-close" onclick="toggleDownloadPanel()" aria-label="Close downloads">&#10005;</button>
   </div>
   <div class="dl-list" id="downloadList"></div>
   <div class="dl-panel-actions">
@@ -511,8 +517,8 @@ input{outline:none;font-family:inherit}
   </div>
 </div>
 
-<div id="trailerModal">
-  <button class="trailer-close" onclick="closeTrailer()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+<div id="trailerModal" role="dialog" aria-modal="true" aria-label="Trailer">
+  <button class="trailer-close" onclick="closeTrailer()" aria-label="Close trailer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
   <div class="trailer-content"><iframe id="trailerIframe" src="" allowfullscreen allow="autoplay; encrypted-media"></iframe></div>
 </div>
 
@@ -1693,8 +1699,8 @@ function renderHeroCarousel(metas) {
     var vj = esc(meta.vj || (meta.vjs && meta.vjs.length ? meta.vjs[0] : ""));
     var desc = esc(meta.description || "");
     var type = meta.type || "movie";
-    slidesHtml += '<div class="hero-slide' + (i === 0 ? ' active' : '') + '" onclick="openDetail(\'' + escJs(type) + '\',\'' + escJs(meta.id) + '\')"><img src="' + esc(bg) + '" alt="" onerror="this.src=\'' + escJs(meta.poster || '') + '\'"><div class="hero-gradient"></div><div class="hero-glow-l"></div><div class="hero-glow-r"></div><div class="hero-content"><div class="hero-badge">Trending Now</div><div class="hero-title">' + name + '</div><div class="hero-meta">' + (year ? '<span>' + year + '</span><div class="dot"></div>' : '') + (genres ? '<span>' + genres + '</span>' : '') + (vj ? '<div class="dot"></div><span>' + vj + '</span>' : '') + '</div>' + (desc ? '<div class="hero-desc">' + desc + '</div>' : '') + '<div class="hero-actions"><button class="btn-primary" onclick="event.stopPropagation();openDetail(\'' + escJs(type) + '\',\'' + escJs(meta.id) + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> Watch Now</button><button class="btn-secondary" onclick="event.stopPropagation();openDetail(\'' + escJs(type) + '\',\'' + escJs(meta.id) + '\')">More Info</button></div></div></div>';
-    dotsHtml += '<div class="hero-dot' + (i === 0 ? ' active' : '') + '" onclick="goHeroSlide(' + i + ')"></div>';
+    slidesHtml += '<div class="hero-slide' + (i === 0 ? ' active' : '') + '" role="button" tabindex="' + (i === 0 ? '0' : '-1') + '" aria-label="' + name + '" onclick="openDetail(\'' + escJs(type) + '\',\'' + escJs(meta.id) + '\')"><img src="' + esc(bg) + '" alt="" decoding="async"' + (i === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + ' onerror="imgFail(this,\'' + escJs(meta.poster || '') + '\')"><div class="hero-gradient"></div><div class="hero-glow-l"></div><div class="hero-glow-r"></div><div class="hero-content"><div class="hero-badge">Trending Now</div><div class="hero-title">' + name + '</div><div class="hero-meta">' + (year ? '<span>' + year + '</span><div class="dot"></div>' : '') + (genres ? '<span>' + genres + '</span>' : '') + (vj ? '<div class="dot"></div><span>' + vj + '</span>' : '') + '</div>' + (desc ? '<div class="hero-desc">' + desc + '</div>' : '') + '<div class="hero-actions"><button class="btn-primary" onclick="event.stopPropagation();openDetail(\'' + escJs(type) + '\',\'' + escJs(meta.id) + '\')"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> Watch Now</button><button class="btn-secondary" onclick="event.stopPropagation();openDetail(\'' + escJs(type) + '\',\'' + escJs(meta.id) + '\')">More Info</button></div></div></div>';
+    dotsHtml += '<button class="hero-dot' + (i === 0 ? ' active' : '') + '" onclick="goHeroSlide(' + i + ')" aria-label="Go to slide ' + (i + 1) + '"></button>';
   });
   heroDiv.innerHTML = '<div class="hero-carousel" ontouchstart="heroTouchStart(event)" ontouchend="heroTouchEnd(event)"><div class="hero-slides">' + slidesHtml + '</div><div class="hero-dots">' + dotsHtml + '</div></div>';
   startHeroAuto();
@@ -2020,7 +2026,7 @@ function renderVJBar(store) {
   var html = '<button class="vj-chip' + (!currentVJFilter ? ' on' : '') + '" onclick="selectVJ(\'\')"><span class="vj-av">All</span>All VJs</button>';
   keys.forEach(function(k) {
     var nm = view[k].name;
-    html += '<button class="vj-chip' + (currentVJFilter === k ? ' on' : '') + '" onclick="selectVJ(\'' + escJs(k) + '\')"><span class="vj-av">' + esc(nm.replace(/^VJ\s*/, "").charAt(0).toUpperCase()) + '</span>' + esc(nm) + '</button>';
+    html += '<button class="vj-chip' + (currentVJFilter === k ? ' on' : '') + '" aria-pressed="' + (currentVJFilter === k) + '" onclick="selectVJ(\'' + escJs(k) + '\')"><span class="vj-av">' + esc(nm.replace(/^VJ\s*/, "").charAt(0).toUpperCase()) + '</span>' + esc(nm) + '</button>';
   });
   var left = bar.scrollLeft;
   bar.innerHTML = html;
@@ -2046,7 +2052,7 @@ function loadVJFiltered(catId) {
   var key = currentVJFilter, name = vjName(key), cat = null;
   if (catId && catId !== "all") { for (var i = 0; i < CATEGORY_TABS.length; i++) { if (CATEGORY_TABS[i].id === catId) { cat = CATEGORY_TABS[i]; break; } } }
   var content = document.getElementById("homeContent");
-  content.innerHTML = '<div class="load-sentinel"><div class="spinner"></div></div>';
+  content.innerHTML = skelPage();
 
   function wanted(item) {
     return !cat || itemMatchesCategory(item, cat);
@@ -2090,7 +2096,7 @@ function selectCategory(catId) {
   for (var i = 0; i < CATEGORY_TABS.length; i++) { if (CATEGORY_TABS[i].id === catId) { cat = CATEGORY_TABS[i]; break; } }
   if (!cat) return;
   var content = document.getElementById("homeContent");
-  content.innerHTML = '<div class="load-sentinel"><div class="spinner"></div></div>';
+  content.innerHTML = skelPage();
   if (cat.typeFilter) loadTypeFiltered(cat);
   else loadGenreFiltered(cat);
 }
@@ -2288,10 +2294,10 @@ function renderContinueSection() {
   scroll.className = "poster-scroll";
   saved.forEach(function(item) {
     var card = document.createElement("div");
-    card.className = "continue-card";
+    card.className = "continue-card"; card.setAttribute("role", "button"); card.tabIndex = 0; card.setAttribute("aria-label", "Resume " + (item.name || ""));
     card.onclick = function() { libOpen(item); };
     var pct = item.duration > 0 ? (item.currentTime / item.duration * 100) : 0;
-    card.innerHTML = '<div class="continue-img-wrap"><img src="' + esc(item.poster) + '" alt="" onerror="this.src=\'\'"><div class="continue-progress" style="width:' + pct + '%"></div><div class="continue-play-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="#000"><polygon points="5,3 19,12 5,21"/></svg></div><button class="continue-remove" onclick="removeContinue(\'' + escJs(item.id) + '\', event)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div><div class="continue-info"><div class="continue-name">' + esc(item.name) + '</div><div class="continue-ep">' + esc(item.episodeInfo || "Resume") + '</div></div>';
+    card.innerHTML = '<div class="continue-img-wrap"><img src="' + esc(item.poster) + '" alt="" loading="lazy" decoding="async" onerror="imgFail(this)"><div class="continue-progress" style="width:' + pct + '%"></div><div class="continue-play-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="#000"><polygon points="5,3 19,12 5,21"/></svg></div><button class="continue-remove" aria-label="Remove from Continue Watching" onclick="removeContinue(\'' + escJs(item.id) + '\', event)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div><div class="continue-info"><div class="continue-name">' + esc(item.name) + '</div><div class="continue-ep">' + esc(item.episodeInfo || "Resume") + '</div></div>';
     scroll.appendChild(card);
   });
   section.appendChild(scroll);
@@ -2315,9 +2321,14 @@ function renderWatchlistSection() {
 // ================================================================
 // POSTER CARD
 // ================================================================
+var IMG_FALLBACK = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="300"><rect width="200" height="300" fill="#111"/><text x="100" y="155" fill="#444" text-anchor="middle" font-size="14" font-family="sans-serif">No Image</text></svg>');
+function imgFail(el, alt) { el.onerror = null; el.src = alt && alt !== el.src ? alt : IMG_FALLBACK; el.onerror = function() { this.onerror = null; this.src = IMG_FALLBACK; }; }
+function skelGrid(n) { var h = '<div class="skeleton-grid" aria-hidden="true">'; for (var i = 0; i < n; i++) h += '<div class="skeleton"></div>'; return h + '</div>'; }
+function skelPage() { return '<div aria-busy="true" aria-label="Loading"><div class="skeleton skeleton-title"></div>' + skelGrid(12) + '</div>'; }
 function createPosterCard(meta) {
   var card = document.createElement("div");
   card.className = "poster-card";
+  card.setAttribute("role", "button"); card.tabIndex = 0; card.setAttribute("aria-label", meta.name || "Open title");
   var type = meta.type || "movie";
   card.onclick = function() { openDetail(type, meta.id); };
   var imgWrap = document.createElement("div");
@@ -2325,8 +2336,8 @@ function createPosterCard(meta) {
   var img = document.createElement("img");
   img.src = meta.poster || "";
   img.alt = meta.name || "";
-  img.loading = "lazy";
-  img.onerror = function() { this.src = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="300" fill="#111"><rect width="200" height="300"/><text x="100" y="155" fill="#333" text-anchor="middle" font-size="14">No Image</text></svg>'); };
+  img.loading = "lazy"; img.decoding = "async";
+  img.onerror = function() { this.onerror = null; this.src = IMG_FALLBACK; };
   imgWrap.appendChild(img);
   var vjName = meta.vj || (meta.vjs && meta.vjs.length ? meta.vjs[0] : "");
   if (vjName) { var badge = document.createElement("div"); badge.className = "poster-badge"; badge.textContent = vjName; imgWrap.appendChild(badge); }
@@ -3022,7 +3033,7 @@ var libTab = "list";
 
 function navSetActive(name) {
   var items = document.querySelectorAll("#bottomNav .nav-item");
-  for (var i = 0; i < items.length; i++) items[i].classList.toggle("active", items[i].getAttribute("data-nav") === name);
+  for (var i = 0; i < items.length; i++) items[i].classList.toggle("active", items[i].getAttribute("data-nav") === name); if (items[i].getAttribute("data-nav") === name) items[i].setAttribute("aria-current", "page"); else items[i].removeAttribute("aria-current");
 }
 
 function navHome() {
@@ -3141,7 +3152,7 @@ function setLibTab(t) { libTab = t; renderLibrary(); }
 function renderLibrary() {
   var tabs = [["list", "My list"], ["history", "History"], ["downloads", "Downloads"]];
   var th = "";
-  tabs.forEach(function(t) { th += '<button class="lib-tab' + (libTab === t[0] ? ' active' : '') + '" onclick="setLibTab(\'' + t[0] + '\')">' + t[1] + '</button>'; });
+  tabs.forEach(function(t) { th += '<button class="lib-tab' + (libTab === t[0] ? ' active' : '') + '" aria-pressed="' + (libTab === t[0]) + '" onclick="setLibTab(\'' + t[0] + '\')">' + t[1] + '</button>'; });
   document.getElementById("libTabs").innerHTML = th;
   var c = document.getElementById("libContent");
   c.innerHTML = "";
@@ -3421,6 +3432,11 @@ function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("keydown", function(e) {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  var t = e.target;
+  if (t && t.getAttribute && t.getAttribute("role") === "button" && t.tagName !== "BUTTON") { e.preventDefault(); t.click(); }
+});
 </script>
 </body>
 </html>
