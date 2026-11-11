@@ -240,6 +240,84 @@ jobs:
                       enqueueDownload(url, fileName, "video/mp4");
                       return true;
                   }
+                  @JavascriptInterface
+                  public String start(String url, String fileName) {
+                      return String.valueOf(enqueueNow(url, fileName));
+                  }
+
+                  @JavascriptInterface
+                  public boolean cancel(String id) {
+                      try {
+                          DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+                          dm.remove(Long.parseLong(id.trim()));
+                          return true;
+                      } catch (Exception e) {
+                          return false;
+                      }
+                  }
+
+                  @JavascriptInterface
+                  public String query(String ids) {
+                      org.json.JSONArray out = new org.json.JSONArray();
+                      try {
+                          DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+                          String[] parts = ids.split(",");
+                          for (int i = 0; i < parts.length; i++) {
+                              String sid = parts[i].trim();
+                              if (sid.length() == 0) continue;
+                              org.json.JSONObject o = new org.json.JSONObject();
+                              o.put("id", sid);
+                              android.database.Cursor c = dm.query(new DownloadManager.Query().setFilterById(Long.parseLong(sid)));
+                              if (c != null && c.moveToFirst()) {
+                                  int st = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+                                  String name = "running";
+                                  if (st == DownloadManager.STATUS_PENDING) name = "pending";
+                                  else if (st == DownloadManager.STATUS_PAUSED) name = "paused";
+                                  else if (st == DownloadManager.STATUS_SUCCESSFUL) name = "done";
+                                  else if (st == DownloadManager.STATUS_FAILED) name = "failed";
+                                  o.put("status", name);
+                                  o.put("bytes", c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)));
+                                  o.put("total", c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)));
+                                  o.put("reason", c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON)));
+                              } else {
+                                  o.put("status", "missing");
+                              }
+                              if (c != null) c.close();
+                              out.put(o);
+                          }
+                      } catch (Exception e) {
+                      }
+                      return out.toString();
+                  }
+              }
+
+              private long enqueueNow(final String url, final String fileName) {
+                  final long[] out = new long[] { -1L };
+                  final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+                  runOnUiThread(new Runnable() {
+                      @Override
+                      public void run() {
+                          try {
+                              DownloadManager.Request req = new DownloadManager.Request(Uri.parse(url));
+                              req.setTitle(fileName);
+                              req.setDescription("OmegaStream");
+                              req.addRequestHeader("User-Agent", webView.getSettings().getUserAgentString());
+                              req.addRequestHeader("Referer", SITE_URL);
+                              req.setMimeType("video/mp4");
+                              req.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                              req.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
+                              DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+                              out[0] = dm.enqueue(req);
+                              Toast.makeText(MainActivity.this, "Downloading to Downloads/" + fileName, Toast.LENGTH_LONG).show();
+                          } catch (Exception e) {
+                              Toast.makeText(MainActivity.this, "Download failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                          } finally {
+                              latch.countDown();
+                          }
+                      }
+                  });
+                  try { latch.await(5, java.util.concurrent.TimeUnit.SECONDS); } catch (InterruptedException ignored) { }
+                  return out[0];
               }
 
               private void enqueueDownload(final String url, final String fileName, final String mime) {

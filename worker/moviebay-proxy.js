@@ -166,6 +166,13 @@ async function handleDownload(request) {
 // Smart download
 //   /dl?api=<s-u.in stream .json url>&vj=<vj name>&sig=<stream name>&name=<file name>
 // ---------------------------------------------------------------
+// stable id for the same file across re-minted links (lets Android's DownloadManager resume)
+function fnv(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(16);
+}
+
 function jsonErr(status, obj) {
   return new Response(JSON.stringify(obj), {
     status,
@@ -221,17 +228,32 @@ async function handleSmartDownload(request) {
       const fileUrl = stream && bestMp4Url(stream);
       if (!fileUrl) { lastErr = 'No downloadable (non-HLS) stream found'; break; }
 
-      // 2) download it straight away
-      const resp = await fetch(fileUrl, { headers: { ...base, 'Accept': '*/*' } });
+      // 2) download it straight away (forward Range so clients can resume)
+      const fileHeaders = { ...base, 'Accept': '*/*' };
+      const range = request.headers.get('Range');
+      if (range) fileHeaders['Range'] = range;
+      const resp = await fetch(fileUrl, { headers: fileHeaders });
+
+      if (resp.status === 416) {
+        return new Response(null, { status: 416, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Expose-Headers': 'Content-Range', 'Content-Range': resp.headers.get('Content-Range') || '' } });
+      }
       if (resp.status === 200 || resp.status === 206) {
+        const cr = resp.headers.get('Content-Range');
+        const cl = resp.headers.get('Content-Length');
+        let total = '';
+        const m = cr && cr.match(/\/(\d+)$/);
+        if (m) total = m[1]; else if (resp.status === 200 && cl) total = cl;
         const h = new Headers({
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Expose-Headers': 'Content-Length, Content-Disposition',
+          'Access-Control-Expose-Headers': 'Content-Length, Content-Disposition, Content-Range, Accept-Ranges, ETag',
           'Content-Type': resp.headers.get('Content-Type') || 'video/mp4',
           'Content-Disposition': 'attachment; filename="' + safeName + '"',
+          'Accept-Ranges': 'bytes',
+          'ETag': '"' + fnv(api + '|' + vj + '|' + sig + '|' + total) + '"',
         });
-        if (resp.headers.get('Content-Length')) h.set('Content-Length', resp.headers.get('Content-Length'));
-        return new Response(resp.body, { status: 200, headers: h });
+        if (cl) h.set('Content-Length', cl);
+        if (resp.status === 206 && cr) h.set('Content-Range', cr);
+        return new Response(resp.body, { status: resp.status, headers: h });
       }
 
       const text = (await resp.text()).slice(0, 200);

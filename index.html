@@ -337,6 +337,11 @@ input{outline:none;font-family:inherit}
 .pc-next.on{display:flex}
 .pc-next button{padding:5px 10px;border-radius:12px;font-size:12px;font-weight:600;background:var(--glass);color:#fff}
 .pc-next .go{background:var(--primary);color:#000}
+.dl-actions{display:flex;gap:6px;margin-top:8px}
+.dl-act{padding:5px 12px;border-radius:14px;background:var(--glass);border:1px solid var(--glass-border);color:var(--text);font-size:11px;font-weight:600}
+.dl-act.danger{color:var(--error)}
+.dl-item-status-icon.paused{background:rgba(255,165,2,0.15);color:var(--warning)}
+.dl-item.paused .dl-progress-fill{background:var(--warning)}
 </style>
 </head>
 <body>
@@ -946,6 +951,300 @@ function downloadFileBrowser(url, fileName, onProgress) {
   });
 }
 
+// ================================================================
+// DOWNLOAD ENGINE: persistent queue + resumable chunks (IndexedDB)
+// ================================================================
+var DLQ_KEY = "os_dlq";
+var activeDl = {};
+var dlSaveTimer = null;
+var appPollTimer = null;
+
+function saveQueueNow() {
+  try {
+    var list = downloadQueue.slice(-60);
+    localStorage.setItem(DLQ_KEY, JSON.stringify(list));
+  } catch (e) {}
+}
+function saveQueue() {
+  if (dlSaveTimer) return;
+  dlSaveTimer = setTimeout(function() { dlSaveTimer = null; saveQueueNow(); }, 600);
+}
+function loadQueue() {
+  var saved = [];
+  try { saved = JSON.parse(localStorage.getItem(DLQ_KEY) || "[]"); } catch (e) {}
+  if (!Array.isArray(saved)) saved = [];
+  saved.forEach(function(it) {
+    if (!it || !it.id) return;
+    if (it.status === "downloading" && !it.dmId) { it.status = "paused"; it.message = "Interrupted - tap Resume to continue"; }
+    else if (it.status === "queued") { it.status = "paused"; it.message = "Not started - tap Resume"; }
+    downloadQueue.push(it);
+  });
+}
+window.addEventListener("pagehide", saveQueueNow);
+window.addEventListener("beforeunload", saveQueueNow);
+
+var idbPromise = null;
+var memChunks = {};
+function idbOpen() {
+  if (idbPromise) return idbPromise;
+  idbPromise = new Promise(function(resolve) {
+    try {
+      var req = indexedDB.open("os_downloads", 1);
+      req.onupgradeneeded = function() { req.result.createObjectStore("chunks"); };
+      req.onsuccess = function() { resolve(req.result); };
+      req.onerror = function() { resolve(null); };
+      req.onblocked = function() { resolve(null); };
+    } catch (e) { resolve(null); }
+  });
+  return idbPromise;
+}
+function chunkKey(id, seq) { return id + "#" + ("00000000" + seq).slice(-8); }
+function chunkRange(id) { return IDBKeyRange.bound(id + "#", id + "#\uffff"); }
+function idbPutChunk(id, seq, blob) {
+  return idbOpen().then(function(db) {
+    if (!db) { (memChunks[id] = memChunks[id] || []).push(blob); return; }
+    return new Promise(function(res, rej) {
+      var tx = db.transaction("chunks", "readwrite");
+      tx.objectStore("chunks").put(blob, chunkKey(id, seq));
+      tx.oncomplete = function() { res(); };
+      tx.onerror = tx.onabort = function() { rej(new Error("Could not save to device storage (is it full?)")); };
+    });
+  });
+}
+function idbListChunks(id) {
+  return idbOpen().then(function(db) {
+    if (!db) {
+      var m = memChunks[id] || [];
+      return { count: m.length, bytes: m.reduce(function(a, b) { return a + b.size; }, 0), blobs: m };
+    }
+    return new Promise(function(res) {
+      var blobs = [], bytes = 0;
+      var req = db.transaction("chunks").objectStore("chunks").openCursor(chunkRange(id));
+      req.onsuccess = function() {
+        var c = req.result;
+        if (c) { blobs.push(c.value); bytes += c.value.size; c.continue(); }
+        else res({ count: blobs.length, bytes: bytes, blobs: blobs });
+      };
+      req.onerror = function() { res({ count: 0, bytes: 0, blobs: [] }); };
+    });
+  });
+}
+function idbClear(id) {
+  delete memChunks[id];
+  return idbOpen().then(function(db) {
+    if (!db) return;
+    return new Promise(function(res) {
+      var tx = db.transaction("chunks", "readwrite");
+      tx.objectStore("chunks").delete(chunkRange(id));
+      tx.oncomplete = tx.onerror = tx.onabort = function() { res(); };
+    });
+  });
+}
+function idbPurgeOrphans() {
+  var valid = {};
+  downloadQueue.forEach(function(d) { if (d.status !== "done" && !d.dmId) valid[d.id] = true; });
+  return idbOpen().then(function(db) {
+    if (!db) return;
+    var tx = db.transaction("chunks", "readwrite");
+    var req = tx.objectStore("chunks").openCursor();
+    req.onsuccess = function() {
+      var c = req.result;
+      if (!c) return;
+      var k = String(c.key);
+      if (!valid[k.substring(0, k.lastIndexOf("#"))]) c.delete();
+      c.continue();
+    };
+  });
+}
+
+function dlHttpError(response, url) {
+  var herr = new Error("Server returned " + response.status);
+  herr.status = response.status;
+  return response.text().then(function(t) {
+    t = (t || "").substring(0, 300);
+    console.log("[Download] error body:", t);
+    var detail = t;
+    try { var j = JSON.parse(t); if (j && j.error) detail = String(j.error); } catch (e) {}
+    if (response.status === 400 && /Missing url parameter/i.test(t) && url.indexOf("/dl?") !== -1) herr.message = "Worker not updated yet. Deploy worker/moviebay-proxy.js in Cloudflare.";
+    else if (detail) herr.message = "Server returned " + response.status + ": " + detail.substring(0, 120);
+    throw herr;
+  }, function() { throw herr; });
+}
+
+function isRetryableDownloadError(err) {
+  if (!err) return false;
+  if (err.retryable || err.network) return true;
+  if (err.status) return err.status >= 500 || err.status === 429 || err.status === 403 || err.status === 408;
+  if (err.name === "AbortError") return true;
+  return /network|failed to fetch|load failed|connection|timeout|terminated/i.test(err.message || "");
+}
+
+function dlWait(secs, st) {
+  return new Promise(function(resolve) {
+    var done = false, t = null;
+    function go() { if (done) return; done = true; clearTimeout(t); window.removeEventListener("online", onOn); st.wake = null; resolve(); }
+    function onOn() { setTimeout(go, 1000); }
+    t = setTimeout(function() { if (navigator.onLine === false) return; go(); }, secs * 1000);
+    window.addEventListener("online", onOn);
+    st.wake = go;
+  });
+}
+
+function resumableDownload(item, url, onProgress, signal) {
+  var seq = 0, buf = [], bufBytes = 0, received = 0, total = item.totalBytes || 0;
+
+  function flush() {
+    if (!bufBytes) return Promise.resolve();
+    var blob = new Blob(buf);
+    buf = []; bufBytes = 0;
+    return idbPutChunk(item.id, seq++, blob);
+  }
+  function restart(msg) {
+    return idbClear(item.id).then(function() {
+      item.receivedBytes = 0; item.totalBytes = 0; item.progress = 0;
+      var e = new Error(msg); e.retryable = true; throw e;
+    });
+  }
+  function finish() {
+    return flush().then(function() { return idbListChunks(item.id); }).then(function(st) {
+      if (!st.bytes) throw new Error("No data received.");
+      if (total && st.bytes < total) { var e = new Error("Connection dropped before the file finished."); e.retryable = true; throw e; }
+      var blob = new Blob(st.blobs, { type: "video/mp4" });
+      if (!saveBlobToDownloads(blob, item.fileName)) throw new Error("Could not save file.");
+      var size = blob.size;
+      setTimeout(function() { idbClear(item.id); }, 30000);
+      return { size: size };
+    });
+  }
+  function consume(response, newTotal) {
+    total = newTotal || total;
+    if (total) item.totalBytes = total;
+    if (!response.body || typeof response.body.getReader !== "function") {
+      return response.blob().then(function(blob) {
+        if (!blob || !blob.size) throw new Error("Empty file received.");
+        if (!saveBlobToDownloads(blob, item.fileName)) throw new Error("Could not save file.");
+        return idbClear(item.id).then(function() { return { size: blob.size }; });
+      });
+    }
+    var reader = response.body.getReader();
+    function pump() {
+      return reader.read().then(function(r) {
+        if (r.done) return finish();
+        buf.push(r.value); bufBytes += r.value.length; received += r.value.length;
+        onProgress(received, total);
+        if (bufBytes >= 2 * 1024 * 1024) return flush().then(pump);
+        return pump();
+      });
+    }
+    return pump().catch(function(err) {
+      return flush().catch(function() {}).then(function() { throw err; });
+    });
+  }
+
+  return idbListChunks(item.id).then(function(st) {
+    var offset = st.bytes;
+    seq = st.count; received = offset;
+    var headers = {};
+    if (offset > 0) headers["Range"] = "bytes=" + offset + "-";
+    return fetch(url, { headers: headers, signal: signal }).then(function(response) {
+      if (response.status === 416) return restart("Saved part no longer matches - restarting");
+      if (!response.ok) return dlHttpError(response, url);
+      var ct = (response.headers.get("Content-Type") || "").toLowerCase();
+      if (ct.indexOf("text/html") !== -1) throw new Error("Got HTML error page. Stream may be expired.");
+      if (ct.indexOf("mpegurl") !== -1) throw new Error("HLS stream cannot be downloaded. Pick MP4.");
+      var cr = response.headers.get("Content-Range");
+      var cl = parseInt(response.headers.get("Content-Length") || "0", 10) || 0;
+      var newTotal = 0;
+      if (response.status === 206 && cr) {
+        var m = cr.match(/bytes\s+(\d+)-\d+\/(\d+|\*)/);
+        if (!m || parseInt(m[1], 10) !== offset) return restart("Server resumed at the wrong position - restarting");
+        newTotal = m[2] === "*" ? 0 : parseInt(m[2], 10);
+      } else {
+        newTotal = cl;
+        if (offset > 0) {
+          return idbClear(item.id).then(function() { seq = 0; received = 0; offset = 0; return consume(response, newTotal); });
+        }
+      }
+      if (offset > 0 && item.totalBytes && newTotal && item.totalBytes !== newTotal) return restart("File changed on the server - restarting");
+      return consume(response, newTotal);
+    });
+  });
+}
+
+// --- Android app: DownloadManager status polling ---
+function startAppPolling() {
+  if (appPollTimer || !window.OmegaDL || typeof window.OmegaDL.query !== "function") return;
+  appPollTimer = setInterval(pollAppDownloads, 1500);
+  pollAppDownloads();
+}
+function pollAppDownloads() {
+  var items = downloadQueue.filter(function(x) { return x.dmId && x.status === "downloading"; });
+  if (!items.length) { clearInterval(appPollTimer); appPollTimer = null; return; }
+  var res = [];
+  try { res = JSON.parse(window.OmegaDL.query(items.map(function(x) { return x.dmId; }).join(","))); } catch (e) { return; }
+  res.forEach(function(r) {
+    var it = null;
+    for (var i = 0; i < items.length; i++) { if (items[i].dmId === String(r.id)) { it = items[i]; break; } }
+    if (!it) return;
+    it.receivedBytes = r.bytes || 0;
+    it.totalBytes = r.total > 0 ? r.total : 0;
+    it.progress = it.totalBytes > 0 ? Math.min(99, it.receivedBytes / it.totalBytes * 100) : 0;
+    if (r.status === "running") it.message = "Downloading " + (it.totalBytes > 0 ? it.progress.toFixed(1) + "%" : formatBytes(it.receivedBytes));
+    else if (r.status === "pending") it.message = "Starting...";
+    else if (r.status === "paused") it.message = "Waiting for connection - resumes automatically";
+    else if (r.status === "done") { it.status = "done"; it.progress = 100; it.message = "Saved to " + (it.saveLocation || "Downloads/"); showToast("Downloaded: " + it.fileName, "success"); }
+    else if (r.status === "failed") { it.status = "error"; it.dmId = ""; it.errorMsg = "Download failed (code " + (r.reason || "?") + "). Tap Retry to start again."; }
+    else if (r.status === "missing") { it.status = "error"; it.dmId = ""; it.errorMsg = "Removed from your device downloads"; }
+  });
+  renderDownloadList(); updateDownloadBadge();
+}
+
+// --- user actions ---
+function findDl(id) {
+  for (var i = 0; i < downloadQueue.length; i++) { if (downloadQueue[i].id === id) return downloadQueue[i]; }
+  return null;
+}
+function dlAction(id, act) {
+  var it = findDl(id);
+  if (!it) return;
+  if (act === "pause") pauseDownload(it);
+  else if (act === "resume") resumeDownload(it);
+  else if (act === "cancel") cancelDownload(it);
+}
+function pauseDownload(it) {
+  var st = activeDl[it.id];
+  if (st) { st.paused = true; if (st.ctl) st.ctl.abort(); if (st.wake) st.wake(); }
+  else if (it.status === "queued") { it.status = "paused"; it.message = "Paused"; }
+  renderDownloadList(); updateDownloadBadge();
+}
+function resumeDownload(it) {
+  if (it.status !== "paused" && it.status !== "error") return;
+  it.status = "queued"; it.errorMsg = ""; it.message = "Waiting";
+  renderDownloadList(); updateDownloadBadge();
+  processDownloadQueue();
+}
+function cancelDownload(it) {
+  var st = activeDl[it.id];
+  if (st) { st.cancelled = true; if (st.ctl) st.ctl.abort(); if (st.wake) st.wake(); }
+  // only stop a device download that is still running - never delete a finished file
+  if (it.dmId && (it.status === "downloading" || it.status === "queued") && window.OmegaDL && typeof window.OmegaDL.cancel === "function") {
+    try { window.OmegaDL.cancel(it.dmId); } catch (e) {}
+  }
+  if (!it.dmId) idbClear(it.id);
+  downloadQueue = downloadQueue.filter(function(x) { return x !== it; });
+  renderDownloadList(); updateDownloadBadge();
+}
+function dlActionsHtml(item) {
+  var id = escJs(item.id), b = "";
+  function btn(act, label, cls) { return '<button class="dl-act' + (cls ? " " + cls : "") + '" onclick="dlAction(\'' + id + '\',\'' + act + '\')">' + label + '</button>'; }
+  if (item.status === "downloading") { if (!item.dmId) b += btn("pause", "Pause"); b += btn("cancel", "Cancel", "danger"); }
+  else if (item.status === "queued") b += btn("cancel", "Cancel", "danger");
+  else if (item.status === "paused") b += btn("resume", "Resume") + btn("cancel", "Cancel", "danger");
+  else if (item.status === "error") b += btn("resume", "Retry") + btn("cancel", "Remove", "danger");
+  else if (item.status === "done") b += btn("cancel", "Remove", "danger");
+  return b ? '<div class="dl-actions">' + b + '</div>' : "";
+}
+
 // --- SMART DOWNLOAD: worker re-creates the stream link and downloads it in ONE request.
 // Needed because stream links are locked to the IP that created them (ip-mismatch).
 function buildSmartDownloadUrl(item) {
@@ -971,14 +1270,17 @@ function openNativeDownload(dlUrl, fileName) {
 // --- QUEUE MANAGEMENT ---
 function addToDownloadQueue(dlItem, fileName) {
   var id = dlItem.itemId || ("dl_" + Date.now());
+  var key = dlItem.key || ((dlItem.type === "episode" && dlItem.seriesId) ? "ep:" + dlItem.seriesId + ":" + dlItem.season + ":" + dlItem.episode : "");
   for (var i = 0; i < downloadQueue.length; i++) {
-    if (downloadQueue[i].id === id && downloadQueue[i].status !== "done" && downloadQueue[i].status !== "error") {
-      showToast("Already in download queue", "info");
-      return;
+    var q = downloadQueue[i];
+    if ((key && q.key === key) || q.id === id) {
+      if (q.status === "done") showToast("Already downloaded. Remove it from the list to download it again.", "info");
+      else showToast("Already in your downloads", "info");
+      return false;
     }
   }
   downloadQueue.push({
-    id: id, fileName: fileName,
+    id: id, key: key, fileName: fileName,
     type: dlItem.type || "direct",
     directUrl: dlItem.directUrl || null,
     seriesId: dlItem.seriesId || null,
@@ -991,6 +1293,7 @@ function addToDownloadQueue(dlItem, fileName) {
   updateDownloadBadge();
   renderDownloadList();
   showToast("Queued: " + fileName, "success");
+  return true;
 }
 
 function getBestDownloadUrl(stream) {
@@ -1044,68 +1347,86 @@ function processDownloadQueue() {
     nextItem.message = "Preparing...";
     renderDownloadList();
 
+    if (window.OmegaDL && typeof window.OmegaDL.start === "function") {
+      // ANDROID APP: hand over to the system DownloadManager and track it by id
+      var dmId = "-1";
+      try { dmId = String(window.OmegaDL.start(dlUrl, nextItem.fileName)); } catch (e) {}
+      if (dmId && dmId !== "-1") {
+        nextItem.dmId = dmId; nextItem.status = "downloading"; nextItem.message = "Starting..."; nextItem.progress = 0;
+        renderDownloadList(); startAppPolling();
+      } else {
+        nextItem.status = "error"; nextItem.errorMsg = "Could not start the download. Tap Retry.";
+        renderDownloadList();
+      }
+      isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue();
+      return;
+    }
     if (window.OmegaDL) {
-      // ANDROID APP: native DownloadManager via OmegaDL bridge
-      // It will ask where to save FIRST, then download with notification progress
-      console.log("[Download] System download:", dlUrl.substring(0, 120));
+      // older APK bridge: fire and forget
       var triggered = triggerSystemDownload(rawUrl, nextItem.fileName, smartUrl);
-
       if (triggered) {
-        nextItem.status = "done";
-        nextItem.progress = 100;
+        nextItem.status = "done"; nextItem.progress = 100;
         nextItem.message = "Saving to " + saveLoc + " - check notifications";
         renderDownloadList();
         showToast("Download started! Saving to " + saveLoc, "success");
-        isProcessingQueue = false;
-        updateDownloadBadge();
-        processDownloadQueue();
-      } else {
-        // Fallback to browser download
-        doBrowserDownload(dlUrl);
-      }
-    } else {
-      // BROWSER: JS fetch + blob with progress
-      doBrowserDownload(dlUrl);
-    }
-  }
-
-  function doBrowserDownload(dlUrl) {
-    nextItem.status = "downloading";
-    renderDownloadList();
-    downloadFileBrowser(dlUrl, nextItem.fileName, function(pct, received, total) {
-      nextItem.progress = pct;
-      nextItem.receivedBytes = received;
-      nextItem.totalBytes = total;
-      nextItem.message = "Downloading " + pct.toFixed(1) + "%";
-      renderDownloadList();
-    }).then(function(result) {
-      nextItem.status = "done";
-      nextItem.progress = 100;
-      nextItem.receivedBytes = result.size;
-      nextItem.totalBytes = result.size;
-      nextItem.message = "Saved to " + (nextItem.saveLocation || "Downloads/");
-      renderDownloadList();
-      showToast("Downloaded! " + formatBytes(result.size) + " saved to " + (nextItem.saveLocation || "Downloads/"), "success");
-      isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue();
-    }).catch(function(err) {
-      console.log("[Download] Error:", err.message);
-      if (err && (err.status === 403 || err.status === 401 || err.network)) {
-        console.log("[Download] fetch refused, falling back to native download");
-        openNativeDownload(dlUrl, nextItem.fileName);
-        nextItem.status = "done";
-        nextItem.progress = 100;
-        nextItem.message = "Sent to your browser. If it plays instead, save it from the player menu.";
-        renderDownloadList();
-        showToast("Download handed to your browser", "info");
         isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue();
         return;
       }
-      nextItem.status = "error";
-      nextItem.errorMsg = err.message || "Unknown error";
+    }
+    doBrowserDownload(dlUrl);
+  }
+
+  function doBrowserDownload(dlUrl) {
+    var item = nextItem;
+    var st = activeDl[item.id] = { ctl: null, paused: false, cancelled: false, wake: null };
+    var attempt = 0, lastPaint = 0, MAX_AUTO = 6;
+    item.status = "downloading"; item.errorMsg = "";
+    renderDownloadList();
+
+    function release() { delete activeDl[item.id]; isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue(); }
+    function pctText() { return item.totalBytes > 0 ? Math.min(99, item.receivedBytes / item.totalBytes * 100).toFixed(0) + "%" : formatBytes(item.receivedBytes); }
+    function markPaused() { item.status = "paused"; item.message = "Paused at " + pctText(); renderDownloadList(); release(); }
+
+    function run() {
+      if (st.cancelled) { release(); return; }
+      if (st.paused) { markPaused(); return; }
+      st.ctl = (typeof AbortController !== "undefined") ? new AbortController() : { abort: function() {}, signal: undefined };
+      item.message = attempt ? "Resuming..." : (item.receivedBytes > 0 ? "Resuming from " + pctText() : "Preparing...");
       renderDownloadList();
-      showToast("Download failed: " + (err.message || "unknown"), "error");
-      isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue();
-    });
+      resumableDownload(item, dlUrl, function(received, total) {
+        item.receivedBytes = received;
+        if (total) item.totalBytes = total;
+        item.progress = total > 0 ? Math.min(99, received / total * 100) : 0;
+        item.message = "Downloading " + (total > 0 ? item.progress.toFixed(1) + "%" : formatBytes(received));
+        var now = Date.now();
+        if (now - lastPaint > 500) { lastPaint = now; renderDownloadList(); }
+      }, st.ctl.signal).then(function(result) {
+        item.status = "done"; item.progress = 100; item.receivedBytes = result.size; item.totalBytes = result.size;
+        item.message = "Saved to " + (item.saveLocation || "Downloads/");
+        renderDownloadList();
+        showToast("Downloaded! " + formatBytes(result.size) + " saved to " + (item.saveLocation || "Downloads/"), "success");
+        release();
+      }).catch(function(err) {
+        err = err || new Error("Unknown error");
+        if (st.cancelled) { release(); return; }
+        if (st.paused) { markPaused(); return; }
+        console.log("[Download] Error:", err.message);
+        if (isRetryableDownloadError(err) && attempt < MAX_AUTO) {
+          attempt++;
+          var wait = Math.min(30, Math.pow(2, attempt));
+          item.message = navigator.onLine === false ? "Offline - will continue when you reconnect" : "Connection lost - retrying in " + wait + "s (" + attempt + "/" + MAX_AUTO + ")";
+          renderDownloadList();
+          dlWait(wait, st).then(run);
+          return;
+        }
+        item.status = "error";
+        item.errorMsg = (err.message || "Failed") + (item.receivedBytes > 0 && item.totalBytes > 0 ? " - Retry continues from " + pctText() : "");
+        renderDownloadList();
+        showToast("Download failed: " + (err.message || "unknown"), "error");
+        release();
+      });
+    }
+    run();
   }
 
   // Get the raw URL
@@ -1155,6 +1476,7 @@ function renderDownloadList() {
   if (!downloadQueue.length) {
     container.innerHTML = '<div class="empty-state"><p>No downloads yet</p></div>';
     if (libList) libList.innerHTML = '<div class="empty-state"><p>No downloads yet</p></div>';
+    saveQueue();
     return;
   }
   var html = "";
@@ -1166,6 +1488,7 @@ function renderDownloadList() {
       statusText = item.message || ("Downloading " + (item.progress || 0).toFixed(1) + "%");
       iconChar = "&#8595;";
     }
+    else if (item.status === "paused") { statusText = item.message || "Paused"; iconChar = "II"; }
     else if (item.status === "done") {
       statusText = item.message || "Done";
       iconChar = "&#10003;";
@@ -1182,10 +1505,11 @@ function renderDownloadList() {
     if (item.saveLocation && item.status !== "queued") {
       locationHtml = '<div class="dl-save-hint">' + esc(item.saveLocation) + '</div>';
     }
-    html += '<div class="dl-item ' + item.status + '"><div class="dl-item-status-icon ' + iconClass + '">' + iconChar + '</div><div class="dl-item-info"><div class="dl-item-name">' + esc(item.fileName) + '</div><div class="dl-item-status"><span>' + esc(statusText) + '</span>' + byteInfo + '</div>' + locationHtml + '<div class="dl-progress-wrap"><div class="dl-progress-fill" style="width:' + (item.progress || 0) + '%"></div></div></div></div>';
+    html += '<div class="dl-item ' + item.status + '"><div class="dl-item-status-icon ' + iconClass + '">' + iconChar + '</div><div class="dl-item-info"><div class="dl-item-name">' + esc(item.fileName) + '</div><div class="dl-item-status"><span>' + esc(statusText) + '</span>' + byteInfo + '</div>' + locationHtml + '<div class="dl-progress-wrap"><div class="dl-progress-fill" style="width:' + (item.progress || 0) + '%"></div></div>' + dlActionsHtml(item) + '</div></div>';
   }
   container.innerHTML = html;
   if (libList) libList.innerHTML = html;
+  saveQueue();
 }
 
 function toggleDownloadPanel() {
@@ -1195,6 +1519,7 @@ function toggleDownloadPanel() {
 }
 
 function clearCompletedDownloads() {
+  downloadQueue.forEach(function(item) { if (item.status === "error" && !item.dmId) idbClear(item.id); });
   downloadQueue = downloadQueue.filter(function(item) { return item.status !== "done" && item.status !== "error"; });
   renderDownloadList(); updateDownloadBadge();
 }
@@ -1240,8 +1565,8 @@ function downloadSelectedEpisodes() {
       }
       var vjName = "";
       if (vjGroups.length > 0 && vjGroups[selectedVJIndex]) vjName = vjGroups[selectedVJIndex].name;
-      addToDownloadQueue({ itemId: (currentDetail ? currentDetail.id : "") + ":" + ep.season + ":" + ep.number, type: "episode", seriesId: currentDetail ? currentDetail.id : "", season: ep.season, episode: ep.number, directUrl: directUrl, vjName: vjName }, fname);
-      count++;
+      var added = addToDownloadQueue({ itemId: (currentDetail ? currentDetail.id : "") + ":" + ep.season + ":" + ep.number, type: "episode", seriesId: currentDetail ? currentDetail.id : "", season: ep.season, episode: ep.number, directUrl: directUrl, vjName: vjName }, fname);
+      if (added) count++;
     }
   }
   if (count > 0) {
@@ -1283,16 +1608,18 @@ function downloadCurrent() {
     fname += "_" + vjGroups[selectedVJIndex].name;
   }
   fname = sanitizeFilename(fname) + ".mp4";
-  var smartApi = "";
+  var smartApi = "", smartKey = "";
   if (currentDetail) {
     if (currentEpisodeIndex >= 0 && currentEpisodeIndex < allEpisodes.length) {
       var sep = allEpisodes[currentEpisodeIndex];
       smartApi = API_BASE + "/stream/series/" + currentDetail.id + ":" + sep.season + ":" + sep.number + ".json";
+      smartKey = "ep:" + currentDetail.id + ":" + sep.season + ":" + sep.number;
     } else {
       smartApi = API_BASE + "/stream/" + (currentDetail.type || "movie") + "/" + currentDetail.id + ".json";
+      smartKey = "mv:" + currentDetail.id;
     }
   }
-  addToDownloadQueue({ itemId: currentDetail ? currentDetail.id + "_play_" + Date.now() : "dl_" + Date.now(), type: "direct", directUrl: dlUrl, apiUrl: smartApi, sig: String(stream.name || stream.title || ""), vjName: vjGroups.length > 0 && vjGroups[selectedVJIndex] ? vjGroups[selectedVJIndex].name : "" }, fname);
+  addToDownloadQueue({ itemId: currentDetail ? currentDetail.id + "_play_" + Date.now() : "dl_" + Date.now(), type: "direct", key: smartKey, directUrl: dlUrl, apiUrl: smartApi, sig: String(stream.name || stream.title || ""), vjName: vjGroups.length > 0 && vjGroups[selectedVJIndex] ? vjGroups[selectedVJIndex].name : "" }, fname);
   if (!document.getElementById("downloadPanel").classList.contains("show")) toggleDownloadPanel();
   processDownloadQueue();
 }
@@ -2922,6 +3249,11 @@ function registerServiceWorker() {
 function init() {
   registerServiceWorker();
   pcInit();
+  loadQueue();
+  idbPurgeOrphans();
+  renderDownloadList();
+  updateDownloadBadge();
+  startAppPolling();
   renderCategoryTabs();
   loadHome();
   renderDownloadList();
