@@ -342,6 +342,14 @@ input{outline:none;font-family:inherit}
 .dl-act.danger{color:var(--error)}
 .dl-item-status-icon.paused{background:rgba(255,165,2,0.15);color:var(--warning)}
 .dl-item.paused .dl-progress-fill{background:var(--warning)}
+.vj-cap{font-size:10px;letter-spacing:.06em;color:var(--text-3);padding:0 18px 2px;text-transform:uppercase}
+.vj-bar{display:flex;gap:8px;padding:2px 18px 12px;overflow-x:auto;scrollbar-width:none}
+.vj-bar::-webkit-scrollbar{display:none}
+.vj-chip{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;white-space:nowrap;font-size:12px;font-weight:500;padding:5px 12px 5px 6px;border-radius:var(--radius-pill);border:1px solid var(--glass-border);background:none;color:var(--text-2)}
+.vj-chip.on{border-color:var(--primary);color:var(--primary);background:rgba(0,220,130,0.1)}
+.vj-av{width:20px;height:20px;border-radius:50%;background:var(--card);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+.vj-chip.on .vj-av{background:var(--primary);color:#000}
+.vj-clear{margin-left:auto;background:none;color:var(--primary);font-size:12px;font-weight:600}
 </style>
 </head>
 <body>
@@ -371,7 +379,10 @@ input{outline:none;font-family:inherit}
     </div>
     <div id="searchSuggestions"></div>
   </div>
-  <div class="category-tabs" id="categoryTabs"></div>
+  <div class="vj-cap" style="padding-top:4px">Category</div>
+  <div class="category-tabs" id="categoryTabs" style="padding-top:4px"></div>
+  <div class="vj-cap" id="vjCap">VJ</div>
+  <div class="vj-bar" id="vjBar"></div>
   <div class="home-content" id="homeContent"></div>
 </div>
 
@@ -688,6 +699,7 @@ function addToGlobalPool(items) {
     var gid = "g_" + item.id;
     if (!isSeen(gid)) { markSeen(gid); globalAllItems.push(item); }
   });
+  scheduleVJRefresh();
 }
 
 // ================================================================
@@ -1929,9 +1941,150 @@ function renderCategoryTabs() {
   });
 }
 
+// ================================================================
+// VJ BAR
+// ================================================================
+var currentVJFilter = "";
+var VJ_STORE = "os_vjs";
+var VJ_SEEDS = ["VJ Junior", "VJ Emmy", "VJ Ice P", "VJ Jingo", "VJ Kevo", "VJ Little T"];
+var vjTimer = null;
+
+function vjKey(raw) { return String(raw || "").toLowerCase().replace(/^\s*vj[\s.\-_]*/, "").replace(/[^a-z0-9]/g, ""); }
+function vjLabel(raw) {
+  var t = String(raw || "").trim().replace(/^vj[\s.\-_]*/i, "").trim();
+  if (t === t.toLowerCase()) t = t.replace(/\b[a-z]/g, function(c) { return c.toUpperCase(); });
+  return "VJ " + t;
+}
+
+function getItemVJs(item) {
+  var out = [], seen = {};
+  function add(raw) {
+    raw = String(raw || "").trim();
+    var k = vjKey(raw);
+    if (!k || seen[k]) return;
+    seen[k] = 1;
+    out.push({ key: k, name: vjLabel(raw) });
+  }
+  if (!item) return out;
+  if (item.vj) add(item.vj);
+  if (Array.isArray(item.vjs)) item.vjs.forEach(function(v) { add(typeof v === "string" ? v : (v && (v.name || v.vj))); });
+  var text = (item.name || "") + " " + (item.description || "");
+  var re = /\bVJ[\s.\-]?([A-Z][A-Za-z0-9]*(?:\s[A-Z][A-Za-z0-9]?\b)?)/g, m;
+  while ((m = re.exec(text)) !== null) add("VJ " + m[1]);
+  return out;
+}
+
+function itemMatchesVJ(item, key) {
+  var v = getItemVJs(item);
+  for (var i = 0; i < v.length; i++) { if (v[i].key === key) return true; }
+  return false;
+}
+
+function loadVJStore() {
+  try { var o = JSON.parse(localStorage.getItem(VJ_STORE) || "{}"); return (o && typeof o === "object") ? o : {}; } catch (e) { return {}; }
+}
+
+function scheduleVJRefresh() {
+  if (vjTimer) return;
+  vjTimer = setTimeout(function() { vjTimer = null; refreshVJBar(); }, 400);
+}
+
+function refreshVJBar() {
+  var store = loadVJStore(), counts = {}, changed = false;
+  globalAllItems.forEach(function(item) {
+    getItemVJs(item).forEach(function(v) { var c = counts[v.key] || (counts[v.key] = { name: v.name, n: 0 }); c.n++; });
+  });
+  Object.keys(counts).forEach(function(k) {
+    var o = store[k];
+    if (!o) { store[k] = { name: counts[k].name, n: counts[k].n }; changed = true; }
+    else if (counts[k].n > o.n) { o.n = counts[k].n; changed = true; }
+  });
+  var keys = Object.keys(store);
+  if (keys.length > 60) {
+    keys.sort(function(a, b) { return store[b].n - store[a].n; }).slice(60).forEach(function(k) { delete store[k]; });
+    changed = true;
+  }
+  if (changed) { try { localStorage.setItem(VJ_STORE, JSON.stringify(store)); } catch (e) {} }
+  renderVJBar(store);
+}
+
+function renderVJBar(store) {
+  var bar = document.getElementById("vjBar");
+  if (!bar) return;
+  store = store || loadVJStore();
+  var view = {};
+  Object.keys(store).forEach(function(k) { view[k] = store[k]; });
+  VJ_SEEDS.forEach(function(nm) { var k = vjKey(nm); if (!view[k]) view[k] = { name: nm, n: 0 }; });
+  var keys = Object.keys(view).sort(function(a, b) { return (view[b].n - view[a].n) || view[a].name.localeCompare(view[b].name); }).slice(0, 24);
+  if (currentVJFilter && keys.indexOf(currentVJFilter) === -1 && view[currentVJFilter]) keys.unshift(currentVJFilter);
+  var html = '<button class="vj-chip' + (!currentVJFilter ? ' on' : '') + '" onclick="selectVJ(\'\')"><span class="vj-av">All</span>All VJs</button>';
+  keys.forEach(function(k) {
+    var nm = view[k].name;
+    html += '<button class="vj-chip' + (currentVJFilter === k ? ' on' : '') + '" onclick="selectVJ(\'' + escJs(k) + '\')"><span class="vj-av">' + esc(nm.replace(/^VJ\s*/, "").charAt(0).toUpperCase()) + '</span>' + esc(nm) + '</button>';
+  });
+  var left = bar.scrollLeft;
+  bar.innerHTML = html;
+  bar.scrollLeft = left;
+}
+
+function vjName(key) {
+  var store = loadVJStore();
+  if (store[key]) return store[key].name;
+  for (var i = 0; i < VJ_SEEDS.length; i++) { if (vjKey(VJ_SEEDS[i]) === key) return VJ_SEEDS[i]; }
+  return "VJ " + key;
+}
+
+function selectVJ(key) {
+  currentVJFilter = key || "";
+  renderVJBar();
+  var sb = document.getElementById("searchBar");
+  if (sb) sb.classList.remove("active");
+  selectCategory(currentCategoryFilter || "all");
+}
+
+function loadVJFiltered(catId) {
+  var key = currentVJFilter, name = vjName(key), cat = null;
+  if (catId && catId !== "all") { for (var i = 0; i < CATEGORY_TABS.length; i++) { if (CATEGORY_TABS[i].id === catId) { cat = CATEGORY_TABS[i]; break; } } }
+  var content = document.getElementById("homeContent");
+  content.innerHTML = '<div class="load-sentinel"><div class="spinner"></div></div>';
+
+  function wanted(item) {
+    return !cat || itemMatchesCategory(item, cat);
+  }
+  var local = globalAllItems.filter(function(item) { return itemMatchesVJ(item, key) && wanted(item); });
+  var term = encodeURIComponent(name.toLowerCase());
+  var calls = [
+    fetchJson(PROXY_URL + encodeURIComponent(API_BASE + "/catalog/movie/moviebay-all-movies/search=" + term + ".json"), 1).catch(function() { return { metas: [] }; }),
+    fetchJson(PROXY_URL + encodeURIComponent(API_BASE + "/catalog/series/moviebay-all-series/search=" + term + ".json"), 1).catch(function() { return { metas: [] }; })
+  ];
+  Promise.all(calls).then(function(results) {
+    if (currentVJFilter !== key || currentCategoryFilter !== (catId || "all")) return;
+    var seen = {}, merged = [];
+    function add(m) { if (m && m.id && !seen[m.id]) { seen[m.id] = true; merged.push(m); } }
+    local.forEach(add);
+    results.forEach(function(r, idx) {
+      if (!r || !r.metas) return;
+      r.metas.forEach(function(m) {
+        if (!m.type) m.type = idx === 0 ? "movie" : "series";
+        var vjs = getItemVJs(m);
+        var ok = vjs.length ? vjs.some(function(v) { return v.key === key; }) : true;
+        if (ok && wanted(m)) add(m);
+      });
+    });
+    renderFilteredGrid(merged, (cat ? cat.name + " \u00b7 " : "") + name);
+    var hdr = content.querySelector(".section-header");
+    if (hdr) {
+      var b = document.createElement("button");
+      b.className = "vj-clear"; b.textContent = "Clear VJ"; b.onclick = function() { selectVJ(""); };
+      hdr.appendChild(b);
+    }
+  }).catch(function() { renderFilteredGrid(local, name); });
+}
+
 function selectCategory(catId) {
   currentCategoryFilter = catId;
   renderCategoryTabs();
+  if (currentVJFilter) { loadVJFiltered(catId); return; }
   if (catId === "all") { resetDedup(); loadHome(); return; }
   var cat = null;
   for (var i = 0; i < CATEGORY_TABS.length; i++) { if (CATEGORY_TABS[i].id === catId) { cat = CATEGORY_TABS[i]; break; } }
@@ -2014,6 +2167,7 @@ function itemMatchesCategory(item, cat) {
 }
 
 function renderFilteredGrid(items, title) {
+  addToGlobalPool(items);
   var content = document.getElementById("homeContent");
   content.innerHTML = "";
   if (!items.length) {
@@ -3252,6 +3406,7 @@ function registerServiceWorker() {
 
 function init() {
   registerServiceWorker();
+  renderVJBar();
   pcInit();
   loadQueue();
   idbPurgeOrphans();
