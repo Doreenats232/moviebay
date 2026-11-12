@@ -3,11 +3,12 @@
 // - API JSON via the proxy: network first, cached copy if offline
 // - Posters: cache first, capped
 // - Video / range requests: never touched
-var VERSION = "v2";
+var VERSION = "v3";
 var SHELL = "os-shell-" + VERSION;
 var API = "os-api-" + VERSION;
 var IMG = "os-img-" + VERSION;
 var SHELL_FILES = ["./", "index.html", "manifest.json", "icons/icon-192.png", "icons/icon-512.png"];
+var DLC = "os-dlstore"; // finished background downloads waiting to be saved
 var IMG_MAX = 150;
 var API_MAX = 60;
 
@@ -18,7 +19,7 @@ self.addEventListener("install", function(e) {
 self.addEventListener("activate", function(e) {
   e.waitUntil(
     caches.keys().then(function(keys) {
-      return Promise.all(keys.filter(function(k) { return k.indexOf("os-") === 0 && k !== SHELL && k !== API && k !== IMG; }).map(function(k) { return caches.delete(k); }));
+      return Promise.all(keys.filter(function(k) { return k.indexOf("os-") === 0 && k !== SHELL && k !== API && k !== IMG && k !== DLC; }).map(function(k) { return caches.delete(k); }));
     }).then(function() { return self.clients.claim(); }).then(notifyUpdate)
   );
 });
@@ -40,7 +41,7 @@ self.addEventListener("fetch", function(e) {
   var url = new URL(req.url);
 
   // never cache video streams / downloads
-  if (url.pathname.indexOf("/video") !== -1 || /\.(mp4|m3u8|ts|mkv|webm)(\?|$)/i.test(url.pathname)) return;
+  if (url.pathname.indexOf("/video") !== -1 || /\/(dl|download)\/?$/.test(url.pathname) || /\.(mp4|m3u8|ts|mkv|webm)(\?|$)/i.test(url.pathname)) return;
 
   // app shell (same origin): cache first, update in background
   if (url.origin === self.location.origin) {
@@ -99,4 +100,36 @@ self.addEventListener("fetch", function(e) {
       })
     );
   }
+});
+
+// ---- Background Fetch: the browser keeps downloading with the tab / app closed ----
+function dlKey(id) { return new URL("__dl/" + encodeURIComponent(id), self.registration.scope).href; }
+
+self.addEventListener("backgroundfetchsuccess", function(e) {
+  var bgf = e.registration;
+  e.waitUntil((async function() {
+    try {
+      var cache = await caches.open(DLC);
+      var recs = await bgf.matchAll();
+      for (var i = 0; i < recs.length; i++) {
+        var r = await recs[i].responseReady;
+        var resp = r.status === 206 ? new Response(r.body, { status: 200, headers: r.headers }) : r;
+        await cache.put(dlKey(bgf.id), resp);
+      }
+      await e.updateUI({ title: "Download ready - tap to save" });
+    } catch (err) {
+      await e.updateUI({ title: "Download finished but could not be stored" });
+    }
+  })());
+});
+
+self.addEventListener("backgroundfetchfail", function(e) {
+  e.waitUntil(e.updateUI({ title: "Download failed - open the app to retry" }));
+});
+
+self.addEventListener("backgroundfetchclick", function(e) {
+  e.waitUntil(self.clients.matchAll({ type: "window" }).then(function(cs) {
+    if (cs.length) return cs[0].focus();
+    return self.clients.openWindow("./");
+  }));
 });

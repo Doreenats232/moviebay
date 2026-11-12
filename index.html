@@ -978,6 +978,7 @@ function downloadFileBrowser(url, fileName, onProgress) {
 // ================================================================
 var DLQ_KEY = "os_dlq";
 var activeDl = {};
+var dlFlush = {};
 var dlSaveTimer = null;
 var appPollTimer = null;
 
@@ -997,8 +998,11 @@ function loadQueue() {
   if (!Array.isArray(saved)) saved = [];
   saved.forEach(function(it) {
     if (!it || !it.id) return;
-    if (it.status === "downloading" && !it.dmId) { it.status = "paused"; it.message = "Interrupted - tap Resume to continue"; }
-    else if (it.status === "queued") { it.status = "paused"; it.message = "Not started - tap Resume"; }
+    if (it.bgId && !bgSupported() && it.status === "downloading") { it.bgId = ""; it.status = "queued"; it.message = "Resuming..."; }
+    else if (it.status === "downloading" && !it.dmId && !it.bgId) { it.status = "queued"; it.message = "Resuming from where it stopped..."; }
+    else if (it.status === "queued") { it.message = "Resuming..."; }
+    else if (it.status === "paused" && !it.userPaused) { it.status = "queued"; it.message = "Resuming..."; }
+    else if (it.status === "error" && it.retry) { it.retryAt = Date.now() + 2000; }
     downloadQueue.push(it);
   });
 }
@@ -1114,6 +1118,7 @@ function dlWait(secs, st) {
 
 function resumableDownload(item, url, onProgress, signal) {
   var seq = 0, buf = [], bufBytes = 0, received = 0, total = item.totalBytes || 0;
+  dlFlush[item.id] = function() { return flush(); };
 
   function flush() {
     if (!bufBytes) return Promise.resolve();
@@ -1215,11 +1220,219 @@ function pollAppDownloads() {
     else if (r.status === "pending") it.message = "Starting...";
     else if (r.status === "paused") it.message = "Waiting for connection - resumes automatically";
     else if (r.status === "done") { it.status = "done"; it.progress = 100; it.message = "Saved to " + (it.saveLocation || "Downloads/"); showToast("Downloaded: " + it.fileName, "success"); }
-    else if (r.status === "failed") { it.status = "error"; it.dmId = ""; it.errorMsg = "Download failed (code " + (r.reason || "?") + "). Tap Retry to start again."; }
+    else if (r.status === "failed") {
+      try { window.OmegaDL.cancel(it.dmId); } catch (e) {}
+      var noSpace = (r.reason === 1006 || r.reason === 1007);
+      it.status = "error"; it.dmId = "";
+      if (noSpace) { it.errorMsg = r.reason === 1006 ? "Not enough storage space on the device." : "Storage not available."; }
+      else { it.errorMsg = "Download interrupted (code " + (r.reason || "?") + ") - retrying automatically"; it.retry = true; it.retryAt = Date.now() + 6000; }
+    }
     else if (r.status === "missing") { it.status = "error"; it.dmId = ""; it.errorMsg = "Removed from your device downloads"; }
   });
   renderDownloadList(); updateDownloadBadge();
 }
+
+// ================================================================
+// BACKGROUND DOWNLOADS
+//  - Android app: system DownloadManager (keeps going with the app closed, resumes by itself)
+//  - Chrome/Edge browsers: Background Fetch (keeps going with the tab closed)
+//  - Anything else: in-page resumable engine (saves chunks, resumes from the saved byte)
+// ================================================================
+var BG_CACHE = "os-dlstore";
+function bgSupported() { return !window.OmegaDL && ("serviceWorker" in navigator) && ("BackgroundFetchManager" in window) && ("caches" in window) && location.protocol !== "file:"; }
+function bgReady() { return navigator.serviceWorker.ready; }
+function bgKey(reg, id) { return new URL("__dl/" + encodeURIComponent(id), reg.scope).href; }
+function bgStored(reg, id) { return caches.open(BG_CACHE).then(function(c) { return c.match(bgKey(reg, id)); }).then(function(r) { return !!r; }); }
+
+function bgProbeTotal(url) {
+  var ctl = (typeof AbortController !== "undefined") ? new AbortController() : null;
+  var t = setTimeout(function() { if (ctl) ctl.abort(); }, 9000);
+  return fetch(url, { headers: { Range: "bytes=0-0" }, signal: ctl ? ctl.signal : undefined }).then(function(r) {
+    clearTimeout(t);
+    var total = 0, cr = r.headers.get("Content-Range"), m = cr && cr.match(/\/(\d+)$/);
+    if (m) total = parseInt(m[1], 10);
+    else if (r.status === 200) total = parseInt(r.headers.get("Content-Length") || "0", 10) || 0;
+    try { if (r.body) r.body.cancel(); } catch (e) {}
+    return r.ok ? total : 0;
+  }).catch(function() { clearTimeout(t); return 0; });
+}
+
+function bgStart(item, url, total) {
+  return bgReady().then(function(reg) {
+    if (!reg.backgroundFetch) throw new Error("Background Fetch unavailable");
+    item.bgId = "bg_" + item.id + "_" + Date.now();
+    var opts = { title: item.fileName, icons: [{ src: new URL("icons/icon-192.png", reg.scope).href, sizes: "192x192", type: "image/png" }] };
+    if (total > 0) opts.downloadTotal = total + 65536;
+    return reg.backgroundFetch.fetch(item.bgId, new Request(url), opts);
+  }).then(function() { saveQueueNow(); });
+}
+
+function bgDrop(it) {
+  if (!it.bgId || !("serviceWorker" in navigator)) return;
+  var id = it.bgId;
+  bgReady().then(function(reg) {
+    var p = reg.backgroundFetch ? reg.backgroundFetch.get(id).then(function(g) { if (g && !g.result) return g.abort(); }) : Promise.resolve();
+    return p.then(function() { return caches.open(BG_CACHE).then(function(c) { return c.delete(bgKey(reg, id)); }); });
+  }).catch(function() {});
+}
+
+// poll the browser's background download until it is stored, failed or cancelled
+function bgWatch(item, st) {
+  return new Promise(function(resolve, reject) {
+    var timer = null, busy = false, lastPaint = 0, successSeen = 0;
+    function end(fn, v) { clearInterval(timer); fn(v); }
+    st.bgAbort = function() {
+      bgReady().then(function(r) { return r.backgroundFetch.get(item.bgId); }).then(function(g) { if (g) g.abort(); }).catch(function() {});
+    };
+    function tick() {
+      if (busy) return;
+      busy = true;
+      if (st.cancelled) { busy = false; end(resolve, "cancelled"); return; }
+      bgReady().then(function(sw) {
+        return sw.backgroundFetch.get(item.bgId).then(function(reg) {
+          if (!reg) {
+            return bgStored(sw, item.bgId).then(function(has) {
+              if (has) end(resolve, "stored");
+              else { var e = new Error("The background download did not finish."); e.bgReason = "gone"; end(reject, e); }
+            });
+          }
+          item.receivedBytes = reg.downloaded || 0;
+          item.progress = item.totalBytes > 0 ? Math.min(99, item.receivedBytes / item.totalBytes * 100) : 0;
+          item.message = "Downloading in background " + (item.totalBytes > 0 ? item.progress.toFixed(1) + "%" : formatBytes(item.receivedBytes));
+          var now = Date.now();
+          if (now - lastPaint > 700) { lastPaint = now; renderDownloadList(); }
+          if (reg.result === "failure") {
+            var e2 = new Error("Background download failed" + (reg.failureReason ? " (" + reg.failureReason + ")" : ""));
+            e2.bgReason = reg.failureReason || "failed"; end(reject, e2); return;
+          }
+          if (reg.result === "success") {
+            return bgStored(sw, item.bgId).then(function(has) {
+              if (has) end(resolve, "stored");
+              else if (++successSeen > 90) { var e3 = new Error("Finished but could not be stored."); e3.bgReason = "store"; end(reject, e3); }
+            });
+          }
+        });
+      }).catch(function() {}).then(function() { busy = false; });
+    }
+    timer = setInterval(tick, 1000);
+    tick();
+  });
+}
+
+function bgFinalize(item) {
+  return bgReady().then(function(reg) {
+    var key = bgKey(reg, item.bgId);
+    return caches.open(BG_CACHE).then(function(c) {
+      return c.match(key).then(function(res) {
+        if (!res) throw new Error("Finished file not found - tap Retry.");
+        return res.blob().then(function(blob) {
+          if (!blob || !blob.size) throw new Error("Empty file received.");
+          var out = blob.slice(0, blob.size, "video/mp4");
+          if (!saveBlobToDownloads(out, item.fileName)) throw new Error("Could not save file.");
+          return { size: blob.size };
+        });
+      });
+    });
+  });
+}
+
+function bgTrack(item, st) {
+  return bgWatch(item, st).then(function(r) {
+    if (r === "cancelled") { delete activeDl[item.id]; return; }
+    return bgFinalize(item).then(function(res) {
+      delete activeDl[item.id];
+      item.status = "done"; item.progress = 100; item.receivedBytes = res.size; item.totalBytes = res.size;
+      item.retry = false; item.autoTries = 0; item.bgDoneAt = Date.now();
+      item.message = "Saved to " + (item.saveLocation || "Downloads/");
+      renderDownloadList(); updateDownloadBadge();
+      showToast("Downloaded! " + formatBytes(res.size) + " saved to " + (item.saveLocation || "Downloads/"), "success");
+    });
+  }).catch(function(err) {
+    delete activeDl[item.id];
+    if (st.cancelled) return;
+    var reason = err && err.bgReason;
+    if (reason === "aborted") {
+      item.status = "error"; item.bgId = ""; item.errorMsg = "Stopped from the notification. Tap Retry to start again.";
+    } else if (reason) {
+      // the browser's background engine gave up: carry on with the in-app resumable engine
+      item.noBg = true; item.bgId = ""; item.status = "queued"; item.message = "Continuing inside the app...";
+      renderDownloadList(); updateDownloadBadge(); processDownloadQueue();
+      return;
+    } else {
+      item.status = "error"; item.errorMsg = (err && err.message) || "Failed";
+    }
+    renderDownloadList(); updateDownloadBadge();
+  });
+}
+
+function doBgDownload(item, dlUrl) {
+  var st = activeDl[item.id] = { ctl: null, paused: false, cancelled: false, wake: null, bg: true };
+  item.status = "downloading"; item.errorMsg = ""; item.message = "Starting background download...";
+  renderDownloadList();
+  var freed = false;
+  function free() { if (freed) return; freed = true; isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue(); }
+  function fallback(why) {
+    console.log("[BG] falling back to in-app download:", why);
+    delete activeDl[item.id];
+    item.noBg = true; item.bgId = ""; item.status = "queued"; item.message = "Continuing inside the app...";
+    renderDownloadList();
+    var was = freed; free(); if (was) processDownloadQueue();
+  }
+  bgProbeTotal(dlUrl).then(function(total) {
+    if (st.cancelled) { delete activeDl[item.id]; free(); return; }
+    if (total > 0) item.totalBytes = total;
+    return bgStart(item, dlUrl, total).then(function() {
+      free(); // other queued items can start while this one runs in the background
+      return bgTrack(item, st);
+    }, function(err) { fallback(err && err.message); });
+  });
+}
+
+// after a reload / reopen: pick the background downloads back up
+function resumeBgItems() {
+  if (!bgSupported()) return;
+  downloadQueue.forEach(function(it) {
+    if (it.status === "downloading" && it.bgId && !activeDl[it.id]) {
+      var st = activeDl[it.id] = { ctl: null, paused: false, cancelled: false, wake: null, bg: true };
+      bgTrack(it, st);
+    }
+  });
+}
+
+function bgCleanup() {
+  if (!("caches" in window) || !("serviceWorker" in navigator) || location.protocol === "file:") return;
+  bgReady().then(function(reg) {
+    return caches.open(BG_CACHE).then(function(c) {
+      return c.keys().then(function(keys) {
+        keys.forEach(function(k) {
+          var keep = downloadQueue.some(function(d) { return d.bgId && bgKey(reg, d.bgId) === k.url && !(d.status === "done" && Date.now() - (d.bgDoneAt || 0) > 600000); });
+          if (!keep) c.delete(k);
+        });
+      });
+    });
+  }).catch(function() {});
+}
+
+// failed downloads that are worth another go retry by themselves (e.g. after a reload or when the network is back)
+function kickRetries() {
+  if (navigator.onLine === false) return;
+  var now = Date.now(), any = false;
+  downloadQueue.forEach(function(it) {
+    if (it.status === "error" && it.retry && (it.autoTries || 0) < 8 && now >= (it.retryAt || 0)) {
+      it.autoTries = (it.autoTries || 0) + 1; it.status = "queued"; it.errorMsg = ""; it.message = "Retrying..."; any = true;
+    }
+  });
+  if (any) { renderDownloadList(); updateDownloadBadge(); processDownloadQueue(); }
+}
+setInterval(kickRetries, 8000);
+window.addEventListener("online", function() { setTimeout(kickRetries, 1500); });
+document.addEventListener("visibilitychange", function() {
+  if (document.visibilityState === "hidden") {
+    // write what we have to disk so a killed tab resumes from the saved byte
+    Object.keys(dlFlush).forEach(function(k) { try { dlFlush[k]().catch(function() {}); } catch (e) {} });
+    saveQueueNow();
+  } else { kickRetries(); }
+});
 
 // --- user actions ---
 function findDl(id) {
@@ -1236,11 +1449,18 @@ function dlAction(id, act) {
 function pauseDownload(it) {
   var st = activeDl[it.id];
   if (st) { st.paused = true; if (st.ctl) st.ctl.abort(); if (st.wake) st.wake(); }
-  else if (it.status === "queued") { it.status = "paused"; it.message = "Paused"; }
+  else if (it.status === "queued") { it.status = "paused"; it.userPaused = true; it.message = "Paused"; }
   renderDownloadList(); updateDownloadBadge();
 }
 function resumeDownload(it) {
   if (it.status !== "paused" && it.status !== "error") return;
+  it.userPaused = false; it.autoTries = 0;
+  if (it.bgId && bgSupported() && !activeDl[it.id]) {
+    it.status = "downloading"; it.errorMsg = ""; it.message = "Saving...";
+    var bst = activeDl[it.id] = { ctl: null, paused: false, cancelled: false, wake: null, bg: true };
+    renderDownloadList(); updateDownloadBadge(); bgTrack(it, bst);
+    return;
+  }
   it.status = "queued"; it.errorMsg = ""; it.message = "Waiting";
   renderDownloadList(); updateDownloadBadge();
   processDownloadQueue();
@@ -1248,6 +1468,7 @@ function resumeDownload(it) {
 function cancelDownload(it) {
   var st = activeDl[it.id];
   if (st) { st.cancelled = true; if (st.ctl) st.ctl.abort(); if (st.wake) st.wake(); }
+  if (it.bgId) bgDrop(it);
   // only stop a device download that is still running - never delete a finished file
   if (it.dmId && (it.status === "downloading" || it.status === "queued") && window.OmegaDL && typeof window.OmegaDL.cancel === "function") {
     try { window.OmegaDL.cancel(it.dmId); } catch (e) {}
@@ -1259,7 +1480,7 @@ function cancelDownload(it) {
 function dlActionsHtml(item) {
   var id = escJs(item.id), b = "";
   function btn(act, label, cls) { return '<button class="dl-act' + (cls ? " " + cls : "") + '" onclick="dlAction(\'' + id + '\',\'' + act + '\')">' + label + '</button>'; }
-  if (item.status === "downloading") { if (!item.dmId) b += btn("pause", "Pause"); b += btn("cancel", "Cancel", "danger"); }
+  if (item.status === "downloading") { if (!item.dmId && !item.bgId) b += btn("pause", "Pause"); b += btn("cancel", "Cancel", "danger"); }
   else if (item.status === "queued") b += btn("cancel", "Cancel", "danger");
   else if (item.status === "paused") b += btn("resume", "Resume") + btn("cancel", "Cancel", "danger");
   else if (item.status === "error") b += btn("resume", "Retry") + btn("cancel", "Remove", "danger");
@@ -1377,7 +1598,7 @@ function processDownloadQueue() {
         nextItem.dmId = dmId; nextItem.status = "downloading"; nextItem.message = "Starting..."; nextItem.progress = 0;
         renderDownloadList(); startAppPolling();
       } else {
-        nextItem.status = "error"; nextItem.errorMsg = "Could not start the download. Tap Retry.";
+        nextItem.status = "error"; nextItem.errorMsg = "Could not start the download - retrying automatically"; nextItem.retry = true; nextItem.retryAt = Date.now() + 8000;
         renderDownloadList();
       }
       isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue();
@@ -1400,14 +1621,15 @@ function processDownloadQueue() {
 
   function doBrowserDownload(dlUrl) {
     var item = nextItem;
+    if (bgSupported() && !item.noBg) { doBgDownload(item, dlUrl); return; }
     var st = activeDl[item.id] = { ctl: null, paused: false, cancelled: false, wake: null };
     var attempt = 0, lastPaint = 0, MAX_AUTO = 6;
     item.status = "downloading"; item.errorMsg = "";
     renderDownloadList();
 
-    function release() { delete activeDl[item.id]; isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue(); }
+    function release() { delete activeDl[item.id]; delete dlFlush[item.id]; isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue(); }
     function pctText() { return item.totalBytes > 0 ? Math.min(99, item.receivedBytes / item.totalBytes * 100).toFixed(0) + "%" : formatBytes(item.receivedBytes); }
-    function markPaused() { item.status = "paused"; item.message = "Paused at " + pctText(); renderDownloadList(); release(); }
+    function markPaused() { item.status = "paused"; item.userPaused = true; item.message = "Paused at " + pctText(); renderDownloadList(); release(); }
 
     function run() {
       if (st.cancelled) { release(); return; }
@@ -1442,7 +1664,8 @@ function processDownloadQueue() {
           return;
         }
         item.status = "error";
-        item.errorMsg = (err.message || "Failed") + (item.receivedBytes > 0 && item.totalBytes > 0 ? " - Retry continues from " + pctText() : "");
+        item.errorMsg = (err.message || "Failed") + (item.receivedBytes > 0 && item.totalBytes > 0 ? " - continues from " + pctText() : "");
+        if (isRetryableDownloadError(err)) { item.retry = true; item.retryAt = Date.now() + 30000; item.errorMsg += " (retrying automatically)"; }
         renderDownloadList();
         showToast("Download failed: " + (err.message || "unknown"), "error");
         release();
@@ -3421,9 +3644,13 @@ function init() {
   pcInit();
   loadQueue();
   idbPurgeOrphans();
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
   renderDownloadList();
   updateDownloadBadge();
   startAppPolling();
+  resumeBgItems();
+  bgCleanup();
+  processDownloadQueue();
   renderCategoryTabs();
   loadHome();
   renderDownloadList();
