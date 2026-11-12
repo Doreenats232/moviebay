@@ -1110,7 +1110,8 @@ function dlWait(secs, st) {
     var done = false, t = null;
     function go() { if (done) return; done = true; clearTimeout(t); window.removeEventListener("online", onOn); st.wake = null; resolve(); }
     function onOn() { setTimeout(go, 1000); }
-    t = setTimeout(function() { if (navigator.onLine === false) return; go(); }, secs * 1000);
+    function arm(ms) { t = setTimeout(function() { if (done) return; if (navigator.onLine === false) { arm(2000); return; } go(); }, ms); }
+    arm(secs * 1000);
     window.addEventListener("online", onOn);
     st.wake = go;
   });
@@ -1218,7 +1219,7 @@ function pollAppDownloads() {
     it.progress = it.totalBytes > 0 ? Math.min(99, it.receivedBytes / it.totalBytes * 100) : 0;
     if (r.status === "running") it.message = "Downloading " + (it.totalBytes > 0 ? it.progress.toFixed(1) + "%" : formatBytes(it.receivedBytes));
     else if (r.status === "pending") it.message = "Starting...";
-    else if (r.status === "paused") it.message = "Waiting for connection - resumes automatically";
+    else if (r.status === "paused") it.message = r.reason === 3 ? "Waiting for Wi-Fi (file is large for mobile data)" : r.reason === 1 ? "Retrying shortly - resumes by itself" : "Waiting for network - resumes by itself";
     else if (r.status === "done") { it.status = "done"; it.progress = 100; it.message = "Saved to " + (it.saveLocation || "Downloads/"); showToast("Downloaded: " + it.fileName, "success"); }
     else if (r.status === "failed") {
       try { window.OmegaDL.cancel(it.dmId); } catch (e) {}
@@ -1425,14 +1426,23 @@ function kickRetries() {
   if (any) { renderDownloadList(); updateDownloadBadge(); processDownloadQueue(); }
 }
 setInterval(kickRetries, 8000);
-window.addEventListener("online", function() { setTimeout(kickRetries, 1500); });
+window.addEventListener("online", function() { setTimeout(function() { kickActive(); kickRetries(); }, 1000); });
 document.addEventListener("visibilitychange", function() {
   if (document.visibilityState === "hidden") {
     // write what we have to disk so a killed tab resumes from the saved byte
     Object.keys(dlFlush).forEach(function(k) { try { dlFlush[k]().catch(function() {}); } catch (e) {} });
     saveQueueNow();
-  } else { kickRetries(); }
+  } else { kickActive(); kickRetries(); if (window.OmegaDL) { startAppPolling(); pollAppDownloads(); } }
 });
+window.addEventListener("pageshow", function() { kickActive(); kickRetries(); });
+function kickActive() {
+  Object.keys(activeDl).forEach(function(k) {
+    var st = activeDl[k];
+    if (!st || st.bg || st.paused || st.cancelled) return;
+    if (st.wake) { st.wake(); return; }
+    if (st.inFlight && st.ctl && Date.now() - (st.lastByte || 0) > 3000) { st.lastByte = Date.now(); try { st.ctl.abort(); } catch (e) {} }
+  });
+}
 
 // --- user actions ---
 function findDl(id) {
@@ -1445,6 +1455,13 @@ function dlAction(id, act) {
   if (act === "pause") pauseDownload(it);
   else if (act === "resume") resumeDownload(it);
   else if (act === "cancel") cancelDownload(it);
+  else if (act === "restart") restartDeviceDownload(it);
+}
+function restartDeviceDownload(it) {
+  if (!it.dmId) return;
+  try { window.OmegaDL.cancel(it.dmId); } catch (e) {}
+  it.dmId = ""; it.status = "queued"; it.receivedBytes = 0; it.progress = 0; it.message = "Restarting...";
+  renderDownloadList(); updateDownloadBadge(); processDownloadQueue();
 }
 function pauseDownload(it) {
   var st = activeDl[it.id];
@@ -1480,7 +1497,7 @@ function cancelDownload(it) {
 function dlActionsHtml(item) {
   var id = escJs(item.id), b = "";
   function btn(act, label, cls) { return '<button class="dl-act' + (cls ? " " + cls : "") + '" onclick="dlAction(\'' + id + '\',\'' + act + '\')">' + label + '</button>'; }
-  if (item.status === "downloading") { if (!item.dmId && !item.bgId) b += btn("pause", "Pause"); b += btn("cancel", "Cancel", "danger"); }
+  if (item.status === "downloading") { if (!item.dmId && !item.bgId) b += btn("pause", "Pause"); if (item.dmId) b += btn("restart", "Restart"); b += btn("cancel", "Cancel", "danger"); }
   else if (item.status === "queued") b += btn("cancel", "Cancel", "danger");
   else if (item.status === "paused") b += btn("resume", "Resume") + btn("cancel", "Cancel", "danger");
   else if (item.status === "error") b += btn("resume", "Retry") + btn("cancel", "Remove", "danger");
@@ -1627,7 +1644,7 @@ function processDownloadQueue() {
     item.status = "downloading"; item.errorMsg = "";
     renderDownloadList();
 
-    function release() { delete activeDl[item.id]; delete dlFlush[item.id]; isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue(); }
+    function release() { clearInterval(st.watch); delete activeDl[item.id]; delete dlFlush[item.id]; isProcessingQueue = false; updateDownloadBadge(); processDownloadQueue(); }
     function pctText() { return item.totalBytes > 0 ? Math.min(99, item.receivedBytes / item.totalBytes * 100).toFixed(0) + "%" : formatBytes(item.receivedBytes); }
     function markPaused() { item.status = "paused"; item.userPaused = true; item.message = "Paused at " + pctText(); renderDownloadList(); release(); }
 
@@ -1637,7 +1654,9 @@ function processDownloadQueue() {
       st.ctl = (typeof AbortController !== "undefined") ? new AbortController() : { abort: function() {}, signal: undefined };
       item.message = attempt ? "Resuming..." : (item.receivedBytes > 0 ? "Resuming from " + pctText() : "Preparing...");
       renderDownloadList();
+      st.inFlight = true; st.lastByte = Date.now();
       resumableDownload(item, dlUrl, function(received, total) {
+        attempt = 0; st.lastByte = Date.now();
         item.receivedBytes = received;
         if (total) item.totalBytes = total;
         item.progress = total > 0 ? Math.min(99, received / total * 100) : 0;
@@ -1645,6 +1664,7 @@ function processDownloadQueue() {
         var now = Date.now();
         if (now - lastPaint > 500) { lastPaint = now; renderDownloadList(); }
       }, st.ctl.signal).then(function(result) {
+        st.inFlight = false;
         item.status = "done"; item.progress = 100; item.receivedBytes = result.size; item.totalBytes = result.size;
         item.message = "Saved to " + (item.saveLocation || "Downloads/");
         renderDownloadList();
@@ -1652,6 +1672,7 @@ function processDownloadQueue() {
         release();
       }).catch(function(err) {
         err = err || new Error("Unknown error");
+        st.inFlight = false;
         if (st.cancelled) { release(); return; }
         if (st.paused) { markPaused(); return; }
         console.log("[Download] Error:", err.message);
@@ -1671,6 +1692,13 @@ function processDownloadQueue() {
         release();
       });
     }
+    // dead-connection watchdog: phones silently drop sockets in the background; reconnect and continue from the saved byte
+    st.watch = setInterval(function() {
+      if (st.inFlight && !st.paused && !st.cancelled && document.visibilityState === "visible" && st.ctl && Date.now() - st.lastByte > 25000) {
+        st.lastByte = Date.now();
+        try { st.ctl.abort(); } catch (e) {}
+      }
+    }, 5000);
     run();
   }
 
